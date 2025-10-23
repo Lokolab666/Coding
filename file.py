@@ -1,12 +1,6 @@
 # resources/was/rep_config.py
-# Uso esperado:
+# Uso:
 #   wsadmin -lang jython -f rep_config.py <propsFile> <cell> <node> <repName>
-#
-# Donde:
-#   <propsFile> = ruta a archivo con "clave=valor" por línea (lineas vacías y #... se ignoran)
-#   <cell>      = nombre de la Cell (ej: mycell)
-#   <node>      = nombre del Node (scope donde vivirá el REP)
-#   <repName>   = nombre del ResourceEnvironmentProvider a crear/asegurar
 
 import sys
 
@@ -23,14 +17,11 @@ def wsadminToList(inlist):
 def ensure_rep(cell, node, repName):
     nodeId = AdminConfig.getid('/Cell:%s/Node:%s/' % (cell, node))
     if not nodeId:
-        print('[ERROR] Node no encontrado: %s/%s' % (cell, node))
-        sys.exit(1)
+        print('[ERROR] Node no encontrado: %s/%s' % (cell, node)); sys.exit(1)
     repId = AdminConfig.getid('/Cell:%s/Node:%s/ResourceEnvironmentProvider:%s/' % (cell, node, repName))
     if repId:
-        print('[INFO] REP ya existe: %s' % repId)
-        return repId
-    attrs = [['name', repName]]
-    repId = AdminConfig.create('ResourceEnvironmentProvider', nodeId, attrs)
+        print('[INFO] REP ya existe: %s' % repId); return repId
+    repId = AdminConfig.create('ResourceEnvironmentProvider', nodeId, [['name', repName]])
     print('[INFO] REP creado: %s' % repId)
     return repId
 
@@ -56,19 +47,19 @@ def ensure_property(propSet, name, value=None, description=None, required=None):
         mods = []
         if value is not None:       mods.append(['value', value])
         if description is not None: mods.append(['description', description])
-        if required is not None:    mods.append(['required', required])  # 'true'|'false'
+        if required is not None:    mods.append(['required', required])
         if mods:
             AdminConfig.modify(pid, mods)
             print('[INFO] Propiedad actualizada: %s' % name)
         else:
             print('[INFO] Propiedad ya existía sin cambios: %s' % name)
-    else:
-        attrs = [['name', name]]
-        if value is not None:       attrs.append(['value', value])
-        if description is not None: attrs.append(['description', description])
-        if required is not None:    attrs.append(['required', required])
-        pid = AdminConfig.create('J2EEResourceProperty', propSet, attrs)
-        print('[INFO] Propiedad creada: %s (%s)' % (name, pid))
+        return pid
+    attrs = [['name', name]]
+    if value is not None:       attrs.append(['value', value])
+    if description is not None: attrs.append(['description', description])
+    if required is not None:    attrs.append(['required', required])
+    pid = AdminConfig.create('J2EEResourceProperty', propSet, attrs)
+    print('[INFO] Propiedad creada: %s (%s)' % (name, pid))
     return pid
 
 def list_properties(propSet, title):
@@ -97,11 +88,9 @@ def parse_props_file(path):
     f = open(path, 'r')
     for raw in f.readlines():
         line = raw.strip()
-        if len(line) == 0 or line.startswith('#'):
-            continue
+        if len(line) == 0 or line.startswith('#'): continue
         if '=' not in line:
-            print('[WARN] Línea ignorada (sin "="): %s' % line)
-            continue
+            print('[WARN] Línea ignorada (sin "="): %s' % line); continue
         k, v = line.split('=', 1)
         props.append( (k.strip(), v.strip()) )
     f.close()
@@ -109,26 +98,19 @@ def parse_props_file(path):
 
 # --- main ---
 if len(sys.argv) < 4:
-    print('Uso: wsadmin -f rep_config.py <propsFile> <cell> <node> <repName>')
-    sys.exit(2)
+    print('Uso: wsadmin -f rep_config.py <propsFile> <cell> <node> <repName>'); sys.exit(2)
 
-propsFile = sys.argv[0]
-cell      = sys.argv[1]
-node      = sys.argv[2]
-repName   = sys.argv[3]
-
+propsFile = sys.argv[0]; cell = sys.argv[1]; node = sys.argv[2]; repName = sys.argv[3]
 print('[INFO] Cell=%s Node=%s REP=%s props=%s' % (cell, node, repName, propsFile))
 
 repId  = ensure_rep(cell, node, repName)
 pSetId = ensure_prop_set(repId)
 
 list_properties(pSetId, 'PROPERTIES (ANTES)')
-
 for (k, v) in parse_props_file(propsFile):
     ensure_property(pSetId, k, v, None, None)
 
 AdminConfig.save()
 print('[INFO] Cambios guardados.')
 sync_node(node)
-
 list_properties(pSetId, 'PROPERTIES (DESPUÉS)')
