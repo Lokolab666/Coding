@@ -1,0 +1,280 @@
+# 1. Application Onboarding – Tools & Access Prerequisites
+
+## 1.1 Purpose and Scope
+
+Before a team can onboard an application to the Argo platform and request WAF design/implementation support, engineers must have access to a common set of tools (GitLab, Jenkins, Artifactory, AWS, observability, security tooling, etc.).
+
+This section describes:
+
+- Required **training**  
+- How to request **access** to each tool via ServiceNow or other channels  
+- Which tools are **mandatory vs. optional** for application onboarding
+
+This documentation is **internal** and targeted at:  
+- Application teams deploying to Argo  
+- MDT Argo / Cap teams  
+- Support teams assisting with onboarding
+
+---
+
+## 1.2 High-Level Onboarding Checklist
+
+Before engaging with MDT Argo for design sessions or WAF integration, application engineers should:
+
+1. Complete mandatory **GitLab training**.
+2. Request **CI/CD platform access** (GitLab, Jenkins, Artifactory).
+3. Request access to **security tooling** (Contrast, CloudGuard).
+4. Request access to **observability tooling** (Grafana, monitoring roles).
+5. Request access to **documentation repositories** (D2 MRCS).
+6. Request **CyberArk** access for privileged credentials.
+7. Request **AWS account access** for the relevant Argo accounts.
+8. (Optional but recommended) Install **Docker Desktop** for local testing.
+9. Join the **Argo Platform** and **Kubernetes upgrade** communities.
+
+---
+
+## 1.3 Tool Access Summary
+
+| Tool / Area                     | Prerequisite                                    | How to Request                                                       | Key Details / Roles                              |
+|---------------------------------|--------------------------------------------------|-----------------------------------------------------------------------|--------------------------------------------------|
+| GitLab                          | GitLab training in Cornerstone                   | ServiceNow → **CI/CD Team Membership**                               | Team: `BCP_Web`, Add as **GitLab Guest**         |
+| Jenkins                         | None (GitLab training recommended)              | ServiceNow → **CI/CD Team Membership**                               | Add as **Jenkins Reporter**                      |
+| Artifactory                     | None (GitLab training recommended)              | ServiceNow → **CI/CD Team Membership**                               | Add as **Artifactory Reporter**                  |
+| Contrast Security               | None                                            | ServiceNow request (Configuration Item: `Contrast Security - PROD`)  | Edit access to *WebDevApps* application          |
+| CloudGuard                      | None                                            | Request Access via **CloudGuard console** form                       | Use `sl-argo` for scanning environment           |
+| Grafana (central)               | None                                            | ETS Central Grafana Access Request Form                              | Role: `ENT-centgrafana-user-SECURE`              |
+| Grafana (team dashboard)        | Central Grafana access                          | ETS Central Grafana Access Request Form                              | Role: `ENT-centgrafana-<teamname>-SECURE`        |
+| D2 MRCS                         | Required D2 training                            | As per MRCS Knowledge Article                                        | Request access to **IT Systems** folder          |
+| CyberArk                        | None                                            | ServiceNow → **PRIVILEGED GLOBAL USER REQUEST**                      | Safe: `SSIT-WebSolutions-RW`                     |
+| AWS Argo Accounts               | None                                            | ServiceNow **INC/Help Ticket** to **Cloud-Global**                   | Roles for dev/prod/observability accounts        |
+| Grafana Admin / Monitoring      | CSOD ServiceNow training                        | ServiceNow Access Request                                            | Roles: `ENT-centgrafana-user-SECURE`, `…-admin-SECURE` |
+| Docker Desktop                  | None (license approval)                         | Internal ordering page (Docker Desktop order)                        | License cost; follow approval workflow           |
+| Argo Platform Community         | None                                            | Join **Global IT Argo Platform Community**                           | For platform updates & collaboration             |
+| Kubernetes Upgrade Notifications| None                                            | Subscribe to **Global IT Kubernetes Platform Community**             | For EKS upgrade notifications                    |
+
+---
+
+## 1.4 Detailed Procedures per Tool
+
+### 1.4.1 GitLab Training (Prerequisite for GitLab Access)
+
+1. In Cornerstone, complete the course:  
+   **“Using GitLab for the BCP Delivery Organization”**.
+2. After completing the course, send an email from your Medtronic email account to **Ash Montebello**, stating that you have completed the training.
+3. Note:  
+   - This step **does not grant GitLab access** by itself.  
+   - It only serves as proof of required training.  
+   - You must still submit a ServiceNow request (next section).
+
+---
+
+### 1.4.2 CI/CD Platform Access (GitLab, Jenkins, Artifactory)
+
+**Prerequisite for GitLab:** GitLab training above.
+
+1. Go to **ServiceNow**: `it.medtronic.com`.
+2. Search for: **“CI/CD Team Membership”**.
+3. Fill in the form:
+
+   - **Requested for:** the new user.  
+   - **Cost Center:** auto-populated.  
+   - **Team Name:** `BCP_Web`.  
+   - **Add GitLab Guests:** enter the new user.  
+   - **Add Jenkins Reporters:** enter the new user.  
+   - **Add Artifactory Reporters:** enter the new user.
+
+4. Click **Order Now**.
+5. A quarterly charge dialog will appear – confirm it.
+6. Once approvals complete:
+   - For **GitLab**, the user must log into `code.medtronic.com` at least once to finalize account creation before additional project access can be granted.
+
+---
+
+### 1.4.3 Contrast Security Access
+
+1. Submit a **ServiceNow** request with:
+   - **Configuration Item:** `Contrast Security - PROD`.  
+   - **Assignment Group:** `Platform Connectivity and Application Security`.  
+   - **Short Description / Description:**  
+     > “Edit level access to WebDevApps application in Contrast.”  
+   - **Detailed description:**  
+     > “Please add `<userid/email>` with edit level access to the WebDevApps application in Contrast.”
+
+2. For more information on Contrast usage at Medtronic, refer to the Contrast page on **Security Central** (internal).
+
+---
+
+### 1.4.4 CloudGuard Access
+
+1. Open the **CloudGuard** console.
+2. Click **“Request Access to CloudGuard”** (right-hand side).
+3. Fill the form as follows:
+   - **Cloud Security Posture Accounts (AWS/Azure/GCP):** `N/A`  
+   - **Kubernetes Security Posture Clusters:** `N/A`  
+   - **Scanning Environment (image or IaC pipeline):** `sl-argo`
+
+4. Once access is granted:
+   - Navigate to:  
+     `Workload Protection → Containers Assets → Images`.  
+   - Use the **Search** box to filter images for your application (Image Tag for specific versions).  
+   - Open an image, go to **“Vulnerabilities”** tab, and review:
+     - **CVEs**  
+     - **Threats**  
+     - **Secrets**  
+     - Any items with remediations.
+
+---
+
+### 1.4.5 Grafana Dashboards (Logs & Metrics)
+
+#### A. Access to an Existing Team Dashboard
+
+1. Submit an **ETS Central Grafana Access Request Form** with:
+   - **Requested for:** your user.  
+   - **What do you want to do?:** `Add access`.  
+   - **Select Role:** `ENT-centgrafana-user-SECURE`  
+     (generic access to log into Grafana).
+
+2. Submit another **ETS Central Grafana Access Request Form**:
+   - **Requested for:** your user.  
+   - **What do you want to do?:** `Add access`.  
+   - **Select Role:** `ENT-centgrafana-<teamname>-SECURE`  
+     (permissions to view your team’s dashboards).
+
+#### B. New Dashboard Configuration for Your Application
+
+1. Send an email to the Argo platform/contact mailbox including:
+   - Application name(s) to include in the dashboard.  
+   - Your team name.  
+   - A list of users/team members who need access.
+
+2. Submit an **ETS Central Grafana Access Request Form**:
+   - **Requested for:** your user.  
+   - **What do you want to do?:** `Add access`.  
+   - **Select Role:** `ENT-centgrafana-user-SECURE`.
+
+3. Once a new AD group and Grafana Team are created for your application:
+   - Search for your team role in the **Role** field of the same form.  
+   - If it exists, select it and submit the request.  
+   - This automatically triggers approval emails; **do not send separate approval emails**.
+
+4. After access is granted:
+   - Log into the **Central Grafana** instance to view your dashboards.
+
+---
+
+### 1.4.6 D2 MRCS Access (Documentation Repository)
+
+1. Follow the internal **Knowledge Article** describing required training to obtain MRCS in D2.
+2. After training, request access to the **IT Systems** folder in D2:
+   - This folder contains documentation for existing web applications (design docs, test plans, test scripts, etc.).  
+   - It is a key reference during application onboarding and WAF design sessions.
+
+---
+
+### 1.4.7 CyberArk Access
+
+1. Go to **ServiceNow**: `it.medtronic.com`.  
+2. Search for: **“PRIVILEGED GLOBAL USER REQUEST”**.  
+3. Fill the form:
+
+   - **Requested for:** user’s name.  
+   - **What do you want to do?:** `Add Access`.  
+   - **CyberArk Platform:** `CyberArk Internal/IT`.  
+   - **Select Safe:** `SSIT-WebSolutions-RW`.
+
+4. Submit the request and wait for approvals.
+
+---
+
+### 1.4.8 AWS Accounts & Argo Environment Access
+
+To work with Argo environments and related AWS resources, request AWS account access.
+
+1. Submit a **ServiceNow INC/Help Ticket** to **Cloud-Global**.  
+2. Before submitting, email the AWS account owner for approval, and **attach their email approval** to the INC.  
+3. INC fields:
+
+   - **Brief description of issue:**  
+     > “AWS Account Access for ((userid))”  
+   - **Does this affect patient safety?:** `No`  
+   - **Who does this impact?:** `Myself`  
+   - **Preferred contact method:** select your preference.  
+   - **Device selection:** either leave blank or select your computer.  
+   - **Describe location:** leave blank.  
+   - **Detailed description of issue:**  
+     Include text such as:
+
+     > “Please add AWS account access for ((Name)) ((userid)) ((email@medtronic.com)) to the following accounts:  
+     > - it-argo-dev-nat (389242548790) – `AWSREF IT Argo-Dev-ras-pfrole`  
+     > - it-argo-prod-nat (872019488961) – `AWSREF IT Argo-Prod-ras-pfrole`  
+     > - it-argoobservability-dev-nat (227143426852) – `AWSREF IT-argo-observability-dev-role`  
+     > - it-wasobserv-monitor-prod-nat (546946948407) – `AWSREF IT-wasobserv-monitor-prod`”
+
+4. Attach the email approval from the AWS account owner to the INC and submit.
+
+---
+
+### 1.4.9 Monitoring / Alerting Tools – Admin Access
+
+1. Complete **CSOD ServiceNow Training** (required).  
+2. Submit a **ServiceNow Access Request**:
+
+   - **Requested for:** your userid/name.  
+   - **What would you like to do?:** `Add Access`.  
+   - **Access type needed:** `IT`.  
+   - **Group(s) to add:**  
+     - `ENT-centgrafana-user-SECURE`  
+     - `ENT-centgrafana-admin-SECURE`  
+     - Plus the specific monitoring group (name TBD; currently being defined).
+
+3. After access is granted, you can:
+   - Administer team dashboards.  
+   - Configure alerts and monitoring for your applications.
+
+---
+
+### 1.4.10 Argo Platform Community & Kubernetes Upgrade Notifications
+
+- Join the **Global IT Argo Platform Community**:
+  - To receive platform updates.  
+  - To collaborate with other users and platform experts.
+
+- Subscribe to the **Global IT Kubernetes Platform Community**:
+  - To receive notifications about EKS cluster upgrades.  
+  - EKS upgrades are applied to `argo-dev` before `argo-prod`; teams should regression test their applications in `argo-dev` after an upgrade and before critical prod changes.
+
+---
+
+### 1.4.11 Docker Desktop (Optional but Recommended)
+
+1. Order **Docker Desktop** through the internal software ordering page.
+   - There is a **license cost** associated.  
+   - For licensing details, contact **RS Software Licensing Admin**.
+2. After approval, you will receive the installer and can install Docker Desktop.
+3. If you experience high memory usage:
+   - Open Docker Desktop **Settings**.  
+   - Uncheck **“Use the WSL 2 based engine”** if needed.
+
+Running your application locally via Docker improves:
+
+- Authentication/authorization testing.  
+- Troubleshooting of specific versions in a production-like environment.
+
+---
+
+### 1.4.12 Initial Exploration of CI/CD Pipelines & Terraform
+
+Once access is granted:
+
+- **GitLab CI Pipelines** (for builds & deployments):
+  - `Manage Namespace`  
+  - `Build Image`  
+  - `Deploy Image`
+
+- **Terraform Projects** (Infrastructure as Code):
+  - `aws-it-argo-dev-nat`  
+  - `aws-it-argo-prod-nat`  
+  - `aws-it-wasobserv-monitor-prod-nat`
+
+Engineers should familiarize themselves with these pipelines and IaC projects as part of application onboarding.
