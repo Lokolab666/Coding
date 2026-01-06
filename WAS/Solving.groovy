@@ -62,18 +62,71 @@ AdminConfig.save()
 
 
 
+# -------------------------
+# Inputs
+# -------------------------
+cellName    = "YOUR_CELL"
+clusterName = "View_logs"
+repName     = "Logs"
 
-clusterId = AdminConfig.getid("/Cell:%s/ServerCluster:%s/" % (cellName, clusterName))
-members = AdminConfig.showAttribute(clusterId, "members")[1:-1].split()
+reeName     = "hello"
+jndiNameVal = "hello"     # change if you want something like "logs/hello" or "myjndi/hello"
 
-nodeNames = {}
-for m in members:
-    node = AdminConfig.showAttribute(m, "nodeName")
-    srv  = AdminConfig.showAttribute(m, "memberName")
-    nodeNames[node] = 1
-    print "%s/%s" % (node, srv)
+# -------------------------
+# 1) Resolve cluster scope
+# -------------------------
+scopeId = AdminConfig.getid("/Cell:%s/ServerCluster:%s/" % (cellName, clusterName))
+if not scopeId:
+    # fallback if cell is not needed in your environment
+    scopeId = AdminConfig.getid("/ServerCluster:%s/" % clusterName)
 
-print "Nodes in cluster:", nodeNames.keys()
+if not scopeId:
+    raise Exception("Cluster not found: %s (cell=%s)" % (clusterName, cellName))
 
+print "Cluster scope ID:", scopeId
+
+# -------------------------
+# 2) Find the REP (Logs) under that cluster scope
+# -------------------------
+repId = None
+reps = AdminConfig.list("ResourceEnvironmentProvider", scopeId)
+
+if reps:
+    for rid in reps.splitlines():
+        if AdminConfig.showAttribute(rid, "name") == repName:
+            repId = rid
+            break
+
+if not repId:
+    raise Exception("ResourceEnvironmentProvider '%s' not found under cluster '%s'" % (repName, clusterName))
+
+print "REP ID:", repId
+
+# -------------------------
+# 3) Check if REE already exists under that REP
+# -------------------------
+existingReeId = None
+rees = AdminConfig.list("ResourceEnvEntry", repId)
+
+if rees:
+    for eid in rees.splitlines():
+        if AdminConfig.showAttribute(eid, "name") == reeName:
+            existingReeId = eid
+            break
+
+if existingReeId:
+    print "ResourceEnvEntry already exists:", reeName, "->", existingReeId
+else:
+    # IBM-required attributes: name + jndiName :contentReference[oaicite:1]{index=1}
+    attrs = [
+        ['name', reeName],
+        ['jndiName', jndiNameVal]
+    ]
+
+    newReeId = AdminConfig.create('ResourceEnvEntry', repId, attrs)
+    print "Created ResourceEnvEntry:", newReeId
+
+    AdminConfig.save()
+    print "Saved."
 
 
