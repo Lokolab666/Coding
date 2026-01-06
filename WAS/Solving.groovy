@@ -1,22 +1,19 @@
-# ---- inputs ----
-cellName    = "MYCELL"
-clusterName = "MYCLUSTER"
+existing = None
+reps = AdminConfig.list("ResourceEnvironmentProvider", scopeId)
 
-# ---- get the cluster scope config id ----
-clusterScope = AdminConfig.getid("/Cell:%s/ServerCluster:%s/" % (cellName, clusterName))
-if not clusterScope:
-    # cell is optional per IBM scope format; try without it
-    clusterScope = AdminConfig.getid("/ServerCluster:%s/" % clusterName)
+if reps:
+    for repId in reps.splitlines():
+        if AdminConfig.showAttribute(repId, "name") == repName:
+            existing = repId
+            break
 
-print "Cluster scope ID:", clusterScope
-if not clusterScope:
-    raise Exception("Cluster not found: %s (cell=%s)" % (clusterName, cellName))
-
-# ---- list REPs under that scope ----
-reps = AdminConfig.list("ResourceEnvironmentProvider", clusterScope)
-print "ResourceEnvironmentProviders at cluster scope:\n", reps
-
-
+if existing:
+    print "Already exists:", repName, "->", existing
+else:
+    # 3) Create it
+    newRep = AdminConfig.create("ResourceEnvironmentProvider", scopeId, [["name", repName]])
+    AdminConfig.save()
+    print "Created:", repName, "->", newRep
 
 
 
