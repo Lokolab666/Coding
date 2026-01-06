@@ -1,33 +1,82 @@
-stage('SSH config local') {
-  sh '''#!/usr/bin/env bash
-set -euo pipefail
-cat > .ssh_config <<'EOF'
-Host was-dmgr
-  HostName 10.171.183.6
-  User svc.col.wasuat.service
-  StrictHostKeyChecking no
-  UserKnownHostsFile /dev/null
-  LogLevel ERROR
-EOF
-'''
-}
+# ---- inputs ----
+cellName    = "MYCELL"
+clusterName = "MYCLUSTER"
 
-// Usar el alias
-sshagent(credentials: ['ssh-to-was']) {
-  sh '''
-  scp -F .ssh_config get_server_info.py was-dmgr:/tmp/get_server_info.py
-  '''
-  withCredentials([usernamePassword(credentialsId: 'was-soap-creds', usernameVariable: 'WAS_USER', passwordVariable: 'WAS_PASS')]) {
-    sh '''#!/usr/bin/env bash
-set -euo pipefail
-ssh -F .ssh_config was-dmgr 'bash -lc "
-  set -e
-  set +H
-  WSADM=\\"$(command -v wsadmin.sh || true)\"
-  if [ -z \\"$WSADM\\" ]; then WSADM=\\"$(find /opt /IBM -type f -name wsadmin.sh 2>/dev/null | head -n1)\\"; fi
-  \\"$WSADM\\" -lang jython -conntype SOAP -host 10.171.183.6 -port 9043 \\
-              -user \\"$WAS_USER\\" -password \\"$WAS_PASS\\" \\
-              -f /tmp/get_server_info.py | tee /tmp/get_server_info.out
-"'''
-  }
-}
+# ---- get the cluster scope config id ----
+clusterScope = AdminConfig.getid("/Cell:%s/ServerCluster:%s/" % (cellName, clusterName))
+if not clusterScope:
+    # cell is optional per IBM scope format; try without it
+    clusterScope = AdminConfig.getid("/ServerCluster:%s/" % clusterName)
+
+print "Cluster scope ID:", clusterScope
+if not clusterScope:
+    raise Exception("Cluster not found: %s (cell=%s)" % (clusterName, cellName))
+
+# ---- list REPs under that scope ----
+reps = AdminConfig.list("ResourceEnvironmentProvider", clusterScope)
+print "ResourceEnvironmentProviders at cluster scope:\n", reps
+
+
+
+
+
+
+# ---- inputs ----
+cellName    = "MYCELL"
+clusterName = "MYCLUSTER"
+repName     = "REP1"
+
+# ---- load IBM AdminResources script library ----
+# Location per IBM docs:
+#   app_server_root/scriptLibraries/resources/
+# Example Linux: /opt/IBM/WebSphere/AppServer/scriptLibraries/resources/AdminResources.py
+# Example Windows: C:/IBM/WebSphere/AppServer/scriptLibraries/resources/AdminResources.py
+execfile("/path/to/app_server_root/scriptLibraries/resources/AdminResources.py")
+
+# ---- create at cluster scope ----
+scope = "Cell=%s,Cluster=%s" % (cellName, clusterName)   # IBM-supported scope string
+repId = AdminResources.createResourceEnvProviderAtScope(scope, repName, [])
+print "Created REP:", repId
+
+AdminConfig.save()
+print "Saved."
+
+
+
+
+
+cellName    = "MYCELL"
+clusterName = "MYCLUSTER"
+repName     = "REP1"
+
+clusterScope = AdminConfig.getid("/Cell:%s/ServerCluster:%s/" % (cellName, clusterName))
+if not clusterScope:
+    clusterScope = AdminConfig.getid("/ServerCluster:%s/" % clusterName)
+if not clusterScope:
+    raise Exception("Cluster not found")
+
+repAttrs = [ ["name", repName] ]   # required('ResourceEnvironmentProvider') => name :contentReference[oaicite:5]{index=5}
+newrep = AdminConfig.create("ResourceEnvironmentProvider", clusterScope, repAttrs)
+print newrep
+
+AdminConfig.save()
+
+
+
+
+
+
+clusterId = AdminConfig.getid("/Cell:%s/ServerCluster:%s/" % (cellName, clusterName))
+members = AdminConfig.showAttribute(clusterId, "members")[1:-1].split()
+
+nodeNames = {}
+for m in members:
+    node = AdminConfig.showAttribute(m, "nodeName")
+    srv  = AdminConfig.showAttribute(m, "memberName")
+    nodeNames[node] = 1
+    print "%s/%s" % (node, srv)
+
+print "Nodes in cluster:", nodeNames.keys()
+
+
+
