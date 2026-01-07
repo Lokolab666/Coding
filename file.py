@@ -1,127 +1,115 @@
-
-def listPropertiesByName(propertySetId):
-    # Return dict: propName -> propId
-    result = {}
-    props = AdminConfig.list("J2EEResourceProperty", propertySetId)
-    if props:
-        for pid in props.splitlines():
-            n = AdminConfig.showAttribute(pid, "name")
-            if n:
-                result[n] = pid
-    return result
-
-
-
 # -------------------------
-# Inputs
+# INPUTS
 # -------------------------
 cellName    = "YOUR_CELL"
 clusterName = "View_logs"
 repName     = "Logs"
 reeName     = "testvalidationentry"
 
-# Properties you want to ensure exist (name -> value)
-propsToApply = {
-    "propA": "valueA",
-    "propB": "valueB",
-    "hello": "world"
-}
+# Custom properties you want to ensure exist (name, value)
+propsToApply = [
+    ["propA", "valueA"],
+    ["propB", "valueB"],
+    ["hello", "world"]
+]
+
+# If True: update value when property exists
+# If False: skip when property exists
+updateIfExists = 1
 
 defaultType     = "java.lang.String"
-defaultRequired = "false"   # keep as string for wsadmin
+defaultRequired = "false"
 
 # -------------------------
-# Helpers
+# 1) Resolve cluster scope
 # -------------------------
-def getClusterScopeId(cell, cluster):
-    sid = AdminConfig.getid("/Cell:%s/ServerCluster:%s/" % (cell, cluster))
-    if not sid:
-        sid = AdminConfig.getid("/ServerCluster:%s/" % cluster)
-    return sid
+scopeId = AdminConfig.getid("/Cell:%s/ServerCluster:%s/" % (cellName, clusterName))
+if not scopeId:
+    scopeId = AdminConfig.getid("/ServerCluster:%s/" % clusterName)
 
-def findRepId(scopeId, repName):
-    reps = AdminConfig.list("ResourceEnvironmentProvider", scopeId)
-    if reps:
-        for rid in reps.splitlines():
-            if AdminConfig.showAttribute(rid, "name") == repName:
-                return rid
-    return None
-
-def findReeId(repId, reeName):
-    rees = AdminConfig.list("ResourceEnvEntry", repId)
-    if rees:
-        for eid in rees.splitlines():
-            if AdminConfig.showAttribute(eid, "name") == reeName:
-                return eid
-    return None
-
-def ensurePropertySet(reeId):
-    ps = AdminConfig.showAttribute(reeId, "propertySet")
-    if ps:
-        return ps
-    # Create a property set under the REE
-    ps = AdminConfig.create("J2EEResourcePropertySet", reeId, [])
-    # Link it back to the REE (some environments already link automatically; this is safe)
-    AdminConfig.modify(reeId, [["propertySet", ps]])
-    return ps
-
-def listPropertiesByName(propertySetId):
-    """Return dict: propName -> propId"""
-    result = {}
-    props = AdminConfig.list("J2EEResourceProperty", propertySetId)
-    if props:
-        for pid in props.splitlines():
-            n = AdminConfig.showAttribute(pid, "name")
-            if n:
-                result[n] = pid
-    return result
-
-def upsertProperty(propertySetId, existingMap, name, value,
-                   ptype=defaultType, required=defaultRequired):
-    if name in existingMap:
-        pid = existingMap[name]
-        # Update value (no duplicates)
-        AdminConfig.modify(pid, [["value", value]])
-        print "Updated property:", name, "->", value
-        return pid
-    else:
-        attrs = [
-            ["name", name],
-            ["type", ptype],
-            ["value", value],
-            ["required", required]
-        ]
-        pid = AdminConfig.create("J2EEResourceProperty", propertySetId, attrs)
-        print "Created property:", name, "->", value
-        return pid
-
-# -------------------------
-# Main
-# -------------------------
-scopeId = getClusterScopeId(cellName, clusterName)
 if not scopeId:
     raise Exception("Cluster not found: %s (cell=%s)" % (clusterName, cellName))
 
-repId = findRepId(scopeId, repName)
-if not repId:
-    raise Exception("REP not found in cluster scope: %s" % repName)
+print "Cluster scope:", scopeId
 
-reeId = findReeId(repId, reeName)
+# -------------------------
+# 2) Find REP by name under cluster scope
+# -------------------------
+repId = None
+reps = AdminConfig.list("ResourceEnvironmentProvider", scopeId)
+if reps:
+    for rid in reps.splitlines():
+        if AdminConfig.showAttribute(rid, "name") == repName:
+            repId = rid
+            break
+
+if not repId:
+    raise Exception("REP not found under cluster scope: %s" % repName)
+
+print "REP:", repId
+
+# -------------------------
+# 3) Find REE by name under REP
+# -------------------------
+reeId = None
+rees = AdminConfig.list("ResourceEnvEntry", repId)
+if rees:
+    for eid in rees.splitlines():
+        if AdminConfig.showAttribute(eid, "name") == reeName:
+            reeId = eid
+            break
+
 if not reeId:
     raise Exception("REE not found under REP '%s': %s" % (repName, reeName))
 
-print "REE ID:", reeId
+print "REE:", reeId
 
-psId = ensurePropertySet(reeId)
-print "PropertySet ID:", psId
+# -------------------------
+# 4) Get or create propertySet
+# -------------------------
+psId = AdminConfig.showAttribute(reeId, "propertySet")
+if not psId:
+    psId = AdminConfig.create("J2EEResourcePropertySet", reeId, [])
+    # Link back (safe even if WAS auto-links)
+    AdminConfig.modify(reeId, [["propertySet", psId]])
 
-existingProps = listPropertiesByName(psId)
+print "PropertySet:", psId
 
-for k in propsToApply.keys():
-    upsertProperty(psId, existingProps, k, propsToApply[k])
-    # refresh map so the next props won't duplicate
-    existingProps = listPropertiesByName(psId)
+# -------------------------
+# 5) Build existing properties map: name -> propertyId
+# -------------------------
+existingProps = {}
+props = AdminConfig.list("J2EEResourceProperty", psId)
+if props:
+    for pid in props.splitlines():
+        pn = AdminConfig.showAttribute(pid, "name")
+        if pn:
+            existingProps[pn] = pid
+
+# -------------------------
+# 6) Create (or update) without repeating names
+# -------------------------
+for p in propsToApply:
+    pname = p[0]
+    pval  = p[1]
+
+    if existingProps.has_key(pname):
+        pid = existingProps[pname]
+        if updateIfExists:
+            AdminConfig.modify(pid, [["value", pval]])
+            print "Updated property:", pname, "->", pval
+        else:
+            print "Skipped (already exists):", pname
+    else:
+        attrs = [
+            ["name", pname],
+            ["type", defaultType],
+            ["value", pval],
+            ["required", defaultRequired]
+        ]
+        pid = AdminConfig.create("J2EEResourceProperty", psId, attrs)
+        existingProps[pname] = pid
+        print "Created property:", pname, "->", pval
 
 AdminConfig.save()
 print "Saved."
-
