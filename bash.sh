@@ -16,12 +16,13 @@ CLUSTERS=(
 )
 
 for CLUSTER in "${CLUSTERS[@]}"; do
-  PREFIX="${CLUSTER%%-*}"                  # e.g., abrc1 from abrc1-atlas-preview-prd
-  SERVER="${PREFIX}-${DOMAIN}"             # e.g., abrc1-tkg.corp.medtronic.com
+  PREFIX="${CLUSTER%%-*}"            # abrc1 from abrc1-atlas-preview-prd
+  SERVER="${PREFIX}-${DOMAIN}"       # abrc1-tkg.corp.medtronic.com
 
   echo "============================================================"
   echo "CLUSTER: $CLUSTER"
   echo "SERVER:  $SERVER"
+  echo "PREFIX:  $PREFIX"
   echo "------------------------------------------------------------"
 
   echo "[1/3] kubectl vsphere login..."
@@ -38,45 +39,48 @@ for CLUSTER in "${CLUSTERS[@]}"; do
   fi
 
   echo
-  echo "[2/3] Finding contexts for this cluster..."
-  mapfile -t CONTEXTS < <(kubectl config get-contexts -o name | grep -F "$CLUSTER" || true)
+  echo "[2/3] Selecting contexts for prefix '$PREFIX' (won't match '${PREFIX}l', etc.)..."
 
-  # Fallback: use the current context right after login
+  # Match contexts that start exactly with PREFIX followed by '-', '.' or end-of-string:
+  #   abrc1-dev-ns ✅
+  #   abrc1-atlas-preview-prd ✅
+  #   abrc1-tkg.corp.medtronic.com ✅
+  #   abrc1l-dev-ns ❌ (won't match)
+  mapfile -t CONTEXTS < <(
+    kubectl config get-contexts -o name \
+      | grep -E "^${PREFIX}(-|\\.|$)" \
+      || true
+  )
+
   if [ "${#CONTEXTS[@]}" -eq 0 ]; then
-    CURRENT_CTX="$(kubectl config current-context 2>/dev/null || true)"
-    if [ -n "$CURRENT_CTX" ]; then
-      CONTEXTS=("$CURRENT_CTX")
-      echo "No matching contexts found by name; using current-context: $CURRENT_CTX"
-    else
-      echo "ERROR: No contexts found after login. Skipping..."
-      echo
-      continue
-    fi
-  else
-    printf "Contexts found (%d):\n" "${#CONTEXTS[@]}"
-    printf " - %s\n" "${CONTEXTS[@]}"
+    echo "ERROR: No contexts found for prefix '$PREFIX' after login."
+    echo
+    continue
   fi
 
+  printf "Contexts found (%d):\n" "${#CONTEXTS[@]}"
+  printf " - %s\n" "${CONTEXTS[@]}"
+
   echo
-  echo "[3/3] kubectl get nodes for each context..."
+  echo "[3/3] Validating 'kubectl get ns' in each context..."
   for CTX in "${CONTEXTS[@]}"; do
     echo
     echo ">>> CONTEXT: $CTX"
+
     if ! kubectl config use-context "$CTX" >/dev/null 2>&1; then
       echo "ERROR: Could not switch to context: $CTX"
       continue
     fi
 
-    kubectl get nodes -o wide || echo "ERROR: kubectl get nodes failed for context: $CTX"
+    # Validate connectivity/permissions by listing namespaces (with a timeout)
+    if kubectl get ns --request-timeout=20s >/dev/null 2>&1; then
+      echo "OK: kubectl get ns succeeded"
+    else
+      echo "FAIL: kubectl get ns failed (no access / auth / cluster unreachable)"
+      # Optional: show the error detail
+      kubectl get ns --request-timeout=20s
+    fi
   done
 
   echo
 done
-
-
-
-
-chmod +x tkg_nodes.sh
-./tkg_nodes.sh
-
-
