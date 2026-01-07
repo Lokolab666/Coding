@@ -1,41 +1,49 @@
-// 1) Keep empty lines (don’t findAll/remove them before splitting)
-def lines = templateFileContent.readLines().collect { it.trim() }
+// IMPORTANT: do NOT remove empty lines before splitting
+def lines = templateFileContent.readLines().collect { it == null ? "" : it.trim() }
 
-// If your file always has 6 header lines (like your example)
-int reeStart = 6
+// Find header end (first blank line)
+int headerEnd = (0..<lines.size()).find { idx -> lines[idx].isEmpty() } ?: -1
 
-// 2) Find the first blank line AFTER the REE section starts
-int splitIndex = (reeStart..<lines.size()).find { idx -> lines[idx].isEmpty() } ?: lines.size()
+// REE starts at first non-empty after headerEnd
+int reeStart = (headerEnd + 1 < lines.size())
+  ? ((headerEnd + 1)..<lines.size()).find { idx -> !lines[idx].isEmpty() }
+  : null
 
-// 3) REE lines = from reeStart until the blank line
-def resourceEnvironmentEntries = (reeStart < splitIndex)
-  ? lines[reeStart..<splitIndex].findAll { it }
-  : []
+// REE ends at next blank line after reeStart
+int reeEnd = (reeStart != null)
+  ? ((reeStart)..<lines.size()).find { idx -> lines[idx].isEmpty() }
+  : null
 
-// Optional: normalize ONLY the name part (before ;) removing spaces:
-// "Prueba Entriesv2;config/.." => "PruebaEntriesv2;config/.."
-resourceEnvironmentEntries = resourceEnvironmentEntries.collect { s ->
-  def parts = s.split(';', 2)
-  (parts.size() == 2) ? (parts[0].replaceAll(/\s+/, '') + ';' + parts[1]) : s
+def resourceEnvironmentEntries = []
+def rawCustomLines = []
+
+if (reeStart != null) {
+  int reeStop = (reeEnd != null) ? reeEnd : lines.size()
+
+  resourceEnvironmentEntries = lines[reeStart..<reeStop].findAll { it }
+
+  // Custom starts after reeEnd (skip blanks)
+  int customStart = (reeEnd != null) ? reeEnd + 1 : reeStop
+  if (customStart < lines.size()) {
+    rawCustomLines = lines[customStart..<lines.size()].findAll { it }
+  }
 }
 
-// 4) Custom lines = after the blank line until end
-def rawCustomLines = (splitIndex + 1 < lines.size())
-  ? lines[(splitIndex + 1)..<lines.size()].findAll { it }
-  : []
-
-// 5) Some custom lines can contain multiple key;value pairs in the same line.
-// Split by whitespace ONLY when the next token looks like "something;something"
+// Some custom lines may contain multiple key;value pairs on ONE line -> split them
 def customProp = rawCustomLines
-  .collectMany { ln -> ln.split(/\s+(?=[^;\s]+;)/) }  // <-- important
+  .collectMany { ln -> ln.split(/\s+(?=[^;\s]+;)/) }   // split only where next token looks like "key;value"
   .collect { it.trim() }
   .findAll { it }
 
-// Optional: same normalization for the key part before ;
+// Optional: remove spaces only in the KEY (before ';') so "Prueba Entriesv2" becomes "PruebaEntriesv2"
+resourceEnvironmentEntries = resourceEnvironmentEntries.collect { s ->
+  def p = s.split(';', 2)
+  (p.size() == 2) ? (p[0].replaceAll(/\s+/, '') + ';' + p[1]) : s
+}
 customProp = customProp.collect { s ->
-  def parts = s.split(';', 2)
-  (parts.size() == 2) ? (parts[0].replaceAll(/\s+/, '') + ';' + parts[1]) : s
+  def p = s.split(';', 2)
+  (p.size() == 2) ? (p[0].replaceAll(/\s+/, '') + ';' + p[1]) : s
 }
 
 commonStgs.printOutput("resourceEnvironmentEntries: ${resourceEnvironmentEntries}", "G")
-commonStgs.printOutput("Custom: ${customProp}", "G")
+commonStgs.printOutput("customProp: ${customProp}", "G")
