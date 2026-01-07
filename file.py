@@ -1,3 +1,17 @@
+
+def listPropertiesByName(propertySetId):
+    # Return dict: propName -> propId
+    result = {}
+    props = AdminConfig.list("J2EEResourceProperty", propertySetId)
+    if props:
+        for pid in props.splitlines():
+            n = AdminConfig.showAttribute(pid, "name")
+            if n:
+                result[n] = pid
+    return result
+
+
+
 # -------------------------
 # Inputs
 # -------------------------
@@ -110,3 +124,4 @@ for k in propsToApply.keys():
 
 AdminConfig.save()
 print "Saved."
+
