@@ -18,45 +18,24 @@ else:
 
 
 
-# ---- inputs ----
-cellName    = "MYCELL"
-clusterName = "MYCLUSTER"
-repName     = "REP1"
 
-# ---- load IBM AdminResources script library ----
-# Location per IBM docs:
-#   app_server_root/scriptLibraries/resources/
-# Example Linux: /opt/IBM/WebSphere/AppServer/scriptLibraries/resources/AdminResources.py
-# Example Windows: C:/IBM/WebSphere/AppServer/scriptLibraries/resources/AdminResources.py
-execfile("/path/to/app_server_root/scriptLibraries/resources/AdminResources.py")
+foundRef = None
+refs = AdminConfig.list('Referenceable', existing)
 
-# ---- create at cluster scope ----
-scope = "Cell=%s,Cluster=%s" % (cellName, clusterName)   # IBM-supported scope string
-repId = AdminResources.createResourceEnvProviderAtScope(scope, repName, [])
-print "Created REP:", repId
+if refs:
+    for refId in refs.splitlines():
+        fcn = AdminConfig.showAttribute(refId, 'factoryClassname')
+        cn  = AdminConfig.showAttribute(refId, 'classname')
+        if fcn == fcnWanted and cn == cnWanted:
+            foundRef = refId
+            break
 
-AdminConfig.save()
-print "Saved."
-
-
-
-
-
-cellName    = "MYCELL"
-clusterName = "MYCLUSTER"
-repName     = "REP1"
-
-clusterScope = AdminConfig.getid("/Cell:%s/ServerCluster:%s/" % (cellName, clusterName))
-if not clusterScope:
-    clusterScope = AdminConfig.getid("/ServerCluster:%s/" % clusterName)
-if not clusterScope:
-    raise Exception("Cluster not found")
-
-repAttrs = [ ["name", repName] ]   # required('ResourceEnvironmentProvider') => name :contentReference[oaicite:5]{index=5}
-newrep = AdminConfig.create("ResourceEnvironmentProvider", clusterScope, repAttrs)
-print newrep
-
-AdminConfig.save()
+if foundRef:
+    print "Referenceable already exists ->", foundRef
+else:
+    newref = AdminConfig.create('Referenceable', existing, rpAttr)
+    print "Created Referenceable ->", newref
+    AdminConfig.save()
 
 
 
