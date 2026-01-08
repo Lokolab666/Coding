@@ -1,37 +1,25 @@
 # Inputs
-propName  = "testCustom"
-propValue = "true"   # keep as string
-updateIfExists = 1
+propNameToDelete = "testCustom"
 
-# 1) Get or create PropertySet (do NOT AdminConfig.modify propertySet)
+# Get propertySet (create is NOT needed for delete)
 psId = AdminConfig.showAttribute(reeId, "propertySet")
-if (psId is None) or (str(psId).strip() == ""):
-    psId = AdminConfig.create("J2EEResourcePropertySet", reeId, [])
 print "PropertySet:", psId
 
-# 2) Check if property already exists (by name)
-existingPropId = None
-props = AdminConfig.list("J2EEResourceProperty", psId)
-if props:
-    for pid in props.splitlines():
-        if AdminConfig.showAttribute(pid, "name") == propName:
-            existingPropId = pid
-            break
-
-# 3) Create or update in a single line
-if existingPropId:
-    if updateIfExists:
-        AdminConfig.modify(existingPropId, [["value", propValue]])
-        print "Updated property:", propName, "=", propValue
-    else:
-        print "Property already exists, skipped:", propName
+if (psId is None) or (str(psId).strip() == ""):
+    print "No propertySet found. Nothing to delete."
 else:
-    newPropId = AdminConfig.create(
-        "J2EEResourceProperty",
-        psId,
-        [["name", propName], ["value", propValue]]
-    )
-    print "Created property:", propName, "=", propValue, "->", newPropId
+    # Find the property by name
+    propId = None
+    props = AdminConfig.list("J2EEResourceProperty", psId)
+    if props:
+        for pid in props.splitlines():
+            if AdminConfig.showAttribute(pid, "name") == propNameToDelete:
+                propId = pid
+                break
 
-AdminConfig.save()
-print "Saved."
+    if propId:
+        AdminConfig.remove(propId)
+        AdminConfig.save()
+        print "Deleted property:", propNameToDelete, "->", propId
+    else:
+        print "Property not found:", propNameToDelete
