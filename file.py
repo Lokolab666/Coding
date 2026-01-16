@@ -29,45 +29,42 @@ print("Done.")
 
 
 
-
 import sys
 
 # -------------------------
 # Args
 # -------------------------
-if len(sys.argv) < 3:
-    print("Usage: manage_app_noclass.py <appName> <nodeName> <serverName>")
+if len(sys.argv) < 1:
+    print("Usage: manage_app_noclass.py <appName>")
     sys.exit(1)
 
-appName   = sys.argv[0]
-nodeName  = sys.argv[1]
-serverName= sys.argv[2]
-
-print("App: %s | Node: %s | Server: %s" % (appName, nodeName, serverName))
+appName = sys.argv[0]
+print("App:", appName)
 
 # -------------------------
 # Validate app exists
 # -------------------------
 installedApps = AdminApp.list().splitlines()
 if appName not in installedApps:
-    raise Exception("Application not found: %s\nInstalled apps: %s" % (appName, ", ".join(installedApps)))
+    raise Exception(
+        "Application not found: %s\nInstalled apps: %s"
+        % (appName, ", ".join(installedApps))
+    )
 
 # -------------------------
 # List modules
 # -------------------------
 print("\n=== Modules (AdminApp.listModules) ===")
 try:
-    # '-server' shows extra markers and server mapping style output
-    print(AdminApp.listModules(appName, '-server'))
+    print(AdminApp.listModules(appName, "-server"))
 except:
-    # Fallback
     print(AdminApp.listModules(appName))
 
 # -------------------------
 # Set APPLICATION classloader mode to PARENT_LAST
-# Path: Deployment -> deployedObject -> classloader -> mode
 # -------------------------
 print("\n=== Setting application classloader to PARENT_LAST ===")
+
 depId = AdminConfig.getid("/Deployment:%s/" % appName)
 if not depId:
     raise Exception("Could not find Deployment config for app: %s" % appName)
@@ -80,21 +77,21 @@ classloaderId = AdminConfig.showAttribute(deployedObjectId, "classloader")
 if not classloaderId:
     raise Exception("Could not resolve classloader for app: %s" % appName)
 
-print("Current classloader:\n%s" % AdminConfig.showall(classloaderId))
+print("Current classloader:")
+print(AdminConfig.showall(classloaderId))
+
 AdminConfig.modify(classloaderId, [["mode", "PARENT_LAST"]])
-print("Updated classloader:\n%s" % AdminConfig.showall(classloaderId))
+
+print("Updated classloader:")
+print(AdminConfig.showall(classloaderId))
 
 # -------------------------
-# Set WAR MODULE(S) classloaderMode to PARENT_LAST (WebModuleDeployment)
-# This is the "Manage modules" / per-web-module classloader setting
+# Set WAR MODULE(S) classloaderMode to PARENT_LAST
 # -------------------------
 print("\n=== Setting WAR module classloaderMode to PARENT_LAST (if any) ===")
 
 modulesAttr = AdminConfig.showAttribute(deployedObjectId, "modules")
 
-# wsadmin sometimes returns either:
-#   [obj1 obj2 obj3]
-# or a whitespace-separated string; normalize it
 modulesList = []
 if modulesAttr:
     s = str(modulesAttr).strip()
@@ -106,20 +103,19 @@ if modulesAttr:
 changedCount = 0
 
 for m in modulesList:
-    # Only touch web modules
     if "WebModuleDeployment" in m:
         currentMode = AdminConfig.showAttribute(m, "classloaderMode")
         if currentMode != "PARENT_LAST":
             AdminConfig.modify(m, [["classloaderMode", "PARENT_LAST"]])
             changedCount += 1
-            print("Updated WebModuleDeployment to PARENT_LAST: %s" % m)
+            print("Updated WebModuleDeployment:", m)
         else:
-            print("Already PARENT_LAST: %s" % m)
+            print("Already PARENT_LAST:", m)
 
-print("WAR modules changed: %d" % changedCount)
+print("WAR modules changed:", changedCount)
 
 # -------------------------
-# Save + (optional) sync nodes (ND)
+# Save + Sync (ND-safe)
 # -------------------------
 print("\n=== Saving configuration ===")
 AdminConfig.save()
@@ -129,25 +125,24 @@ try:
     AdminNodeManagement.syncActiveNodes()
     print("Node sync requested.")
 except:
-    print("Node sync not available or not needed (probably WAS Base).")
+    print("Node sync not available or not required.")
 
 # -------------------------
-# Start the application on a specific server
-# Requires the target server JVM to be running.
-# Uses ApplicationManager MBean in that server process.
+# Start application on ALL running servers
 # -------------------------
-print("\n=== Starting application ===")
-query = "type=ApplicationManager,node=%s,process=%s,*" % (nodeName, serverName)
-appManager = AdminControl.queryNames(query)
+print("\n=== Starting application on all running JVMs ===")
 
-if not appManager:
-    raise Exception(
-        "Could not find ApplicationManager MBean using query:\n%s\n"
-        "Is server %s/%s running?" % (query, nodeName, serverName)
-    )
+appManagers = AdminControl.queryNames("type=ApplicationManager,*")
 
-AdminControl.invoke(appManager, "startApplication", appName)
-print("Start invoked for application: %s" % appName)
+if not appManagers:
+    raise Exception("No ApplicationManager MBeans found. Are servers running?")
+
+for mgr in appManagers.splitlines():
+    try:
+        AdminControl.invoke(mgr, "startApplication", appName)
+        print("Start invoked on:", mgr)
+    except:
+        print("Failed to start app on:", mgr)
 
 print("\nDone.")
 
@@ -182,3 +177,4 @@ else:
 
 print(result)
 print("Done.")
+
