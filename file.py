@@ -151,3 +151,34 @@ print("Start invoked for application: %s" % appName)
 
 print("\nDone.")
 
+
+
+
+
+
+
+import sys
+
+if len(sys.argv) < 2:
+    print("Usage: export_app.py <appName> <outEarPath> [exportToLocal true|false]")
+    sys.exit(1)
+
+appName = sys.argv[0]
+outEar  = sys.argv[1]
+exportToLocal = (len(sys.argv) > 2 and sys.argv[2].lower() == "true")
+
+# Validate app exists
+apps = AdminApp.list().splitlines()
+if appName not in apps:
+    raise Exception("Application not found: %s\nInstalled apps: %s" % (appName, ", ".join(apps)))
+
+# Export
+if exportToLocal:
+    print("Exporting (exportToLocal) %s -> %s" % (appName, outEar))
+    result = AdminApp.export(appName, outEar, '[-exportToLocal]')
+else:
+    print("Exporting %s -> %s" % (appName, outEar))
+    result = AdminApp.export(appName, outEar)
+
+print(result)
+print("Done.")
