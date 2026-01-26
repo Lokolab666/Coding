@@ -1,215 +1,546 @@
-# Operational model — Incident escalation for on-prem Kubernetes (Atlas) using ServiceNow
+Operational Support Model — Detailed Formal Descriptions
 
-Below is a complete, ready-to-use operational model for incident escalation tailored to your context (ServiceNow + on-prem Kubernetes / Atlas). It includes the escalation levels, stakeholder roles (including the requested IDs 11 / 12 / 13), responsibilities, timelines, and runbook-style actions for each severity. You can paste this into your SOP/KB or use it to build ServiceNow workflows and notification rules.
+On-Prem Kubernetes (Atlas) — ServiceNow
 
----
+Below is an expanded, formal, and comprehensive description of the Operational Support Model you requested. It includes long-form descriptions for every major section (roles, responsibilities, processes, SLAs, escalation, governance, tools, communications, metrics, training, and appendices). You can paste these sections directly into a formal SOP, governance playbook, or ServiceNow knowledge article set.
 
-# 1 — Scope & assumptions
-
-* Platform: On-prem Kubernetes (Atlas).
-* Ticketing: ServiceNow is the single source of truth for incident records.
-* Alerts can be created either automatically (monitoring/alerting) or manually (user / support).
-* This model covers operational incident handling from detection → resolution → post-incident review (RCA).
-* Stakeholder IDs: you provided “11 12 13 architect vendor” — I mapped those to concrete roles below so they can be referenced in ServiceNow, runbooks and escalation matrices.
 
 ---
 
-# 2 — Stakeholders & roles (including IDs 11, 12, 13)
+1. Executive Summary
 
-| Stakeholder ID | Role name                                              | Primary responsibilities                                                                                                   |
-| -------------: | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-|             01 | L1 Support (Service Desk)                              | Ticket intake, initial validation, basic triage, update ServiceNow, escalate if beyond scope.                              |
-|             02 | L2 / Platform Operations (DevOps)                      | Troubleshoot kubernetes nodes, pods, networking, storage; implement known fixes; update runbooks.                          |
-|             03 | L3 / Site Reliability Engineering (SRE)                | Deep platform debugging, cluster control plane, etcd, kubelet, CNI, etc.                                                   |
-|             11 | Architect                                              | Provide architecture guidance, risk assessment for config changes, approve emergency changes, make design-level decisions. |
-|             12 | Vendor (third-party HW/SW support)                     | Provide vendor escalation for hardware, firmware, supported software components; accept vendor SR and track progress.      |
-|             13 | Platform / Product Owner                               | Business impact decisions, prioritization, customer communications, final sign-off on SLAs & RCA.                          |
-|            MGT | Management Escalation (Ops Manager / Incident Sponsor) | Escalate to leadership, approve cross-team resource allocation, stakeholder communications.                                |
-|          COMMS | Communications / Customer Success                      | External/internal communications, status pages, customer notifications.                                                    |
+This document establishes the Operational Support Model for the On-Prem Kubernetes (Atlas) platform and its associated services (Argo CI/CD, Source Code management, Artifactory, database services). It codifies responsibilities across support levels (L1, L2, L3), named roles (Evangelist, EM Lead / EM Support, Team Leads, Support Engineers), vendor engagement, and management stakeholders. ServiceNow is the authoritative source for incident, problem, and change management records. The model is designed to ensure consistent, auditable, and predictable operational support aligned with the client’s Service Level Agreement requirements and internal governance expectations.
 
-> Note: replace placeholder contacts (emails/phones) in the final document with real on-call routing entries and ServiceNow group names.
 
 ---
 
-# 3 — Severity classification & SLAs (suggested)
+2. Scope and Applicability
 
-Define severity in ServiceNow (Priority mapping used by runbooks):
+This Operational Support Model applies to:
 
-* **P1 (Critical / Major Incident)** — Cluster control plane down, multiple customer services down, data loss, or security compromise.
+All production and designated pre-production clusters of On-Prem Kubernetes (Atlas).
 
-  * Response: Incident Commander within **15 minutes**, full war room.
-  * Target: mitigation / workaround within **1 hour** (adjust to your org SLAs).
-* **P2 (High)** — Production service degraded or large subset of customers impacted.
+Platform services associated with the Kubernetes environment (Argo CI/CD, GitLab, Artifactory, Port.io, etc.).
 
-  * Response: Affected platform owner & L2 within **30 minutes**.
-  * Target: mitigation within **4 hours**.
-* **P3 (Medium)** — Single service degraded, limited users affected.
+All incidents, service requests, and operational changes raised through ServiceNow and assigned to the following support groups:
 
-  * Response: L1/L2 triage within **2 hours**.
-  * Target: resolution within **2 business days**.
-* **P4 (Low)** — Non-urgent requests, configuration changes, feature requests.
+Infra-SourceCode IT Support-Global-L1
 
-  * Response: Route to backlog / change process.
+Infra-Argo IT Support-Global-L1
 
-(Adjust exact timing to your organizational SLAs. Use these as policy defaults.)
+Infra-Kubernetes Platform IT Support-Global-L1
 
----
+Infra-Manufacturing IT Support-Global-L1 (On-Prem Kubernetes)
 
-# 4 — Incident lifecycle & escalation flow (high level)
+Database
 
-1. **Detection / Intake**
 
-   * Automated alert (monitoring) or manual report → create ServiceNow incident (automatically if integrated) with required fields: `Short description`, `Impact`, `Urgency`, `Priority`, `Service CI` (Atlas-K8s), `Affected Pods/Namespaces`, `Cluster node(s)`, `Logs / Correlation IDs`, `Monitoring alert IDs`, `Initial steps taken`.
-2. **Initial Triage (L1)**
 
-   * Validate alert (false positive?), gather basic telemetry: `kubectl get nodes/pods`, check cluster metrics/dashboards.
-   * If resolvable by known playbook → L1 fixes and resolves ticket.
-   * If not → escalate to L2 (assign to Platform Operations) and update ticket with triage notes.
-3. **Investigation (L2 / L3)**
+This model does not supersede security incident response procedures or vendor SLAs for externally managed services; those operate in parallel and reference their specific contractual escalation routes.
 
-   * L2 performs deeper troubleshooting (pod logs, events, node health, CNI, storage).
-   * If the cause is platform-level (etcd, kube-api, CNI bug), escalate immediately to L3 and notify Architect (11) if architectural impact or emergency change is required.
-4. **Major Incident Declaration**
-
-   * If P1 conditions apply, declare Major Incident in ServiceNow: assign an **Incident Commander (IC)**, open a war room, enable incident bridge, add stakeholders: COMMS, MGT, Architect (11), Vendor (12) as needed, and Platform Owner (13).
-5. **Mitigation & Recovery**
-
-   * Apply approved mitigations / runbook actions. If vendor/hardware is implicated, open vendor SR and escalate to vendor (12).
-   * Document all actions in ServiceNow (step, who, timestamp).
-6. **Resolution & Recovery**
-
-   * Confirm services restored. Close incident after verification steps and stakeholder sign-off (Platform Owner (13) and IC).
-7. **Post-Incident**
-
-   * Open a Post-Incident Review (RCA) ticket; classify root cause, corrective actions and schedule follow-up changes or process improvements. Architect (11) and Vendor (12) participate for technical RCA aspects; Platform Owner (13) owns business impact notes.
 
 ---
 
-# 5 — Detailed escalation matrix (who to call and when)
+3. Detailed Support Levels & Responsibilities
 
-| Trigger / Condition                                   |                                      Primary action | Escalate to (if not resolved)                      |                                                         When to escalate |
-| ----------------------------------------------------- | --------------------------------------------------: | -------------------------------------------------- | -----------------------------------------------------------------------: |
-| Automated monitor: Node unreachable / kube-api errors |                                L1 triage (validate) | L2 if continues > 15 min                           |                                             Immediately after validation |
-| Multiple namespaces failing / service down            |         L2 investigate, create Major Incident if P1 | L3 + Architect (11) + COMMS + MGT                  |                               If customer service outage / >5% customers |
-| Storage backend failing (persistent volumes)          |                                 L2/L3 investigation | Vendor (12) if HW/third-party storage              | After initial troubleshooting shows hardware / vendor driver implication |
-| Security incident (suspected compromise)              | Activate security incident process; isolate cluster | Security team + MGT + Architect (11) + Vendor (12) |                                                  Immediate (treat as P1) |
-| Emergency configuration rollback needed               |                      IC authorizes emergency change | Architect (11) for approval; MGT notified          |                                           As soon as rollback plan ready |
+3.1 Level 1 (L1) — Global IT Support (First Line)
 
-Include names/phone/email/on-call group in ServiceNow contact fields.
+Role Description (Formal):
+L1 is the canonical first-line responder. L1 functions as the service desk for platform-related incidents and service requests across the Atlas ecosystem. The L1 team validates incoming records, performs initial troubleshooting steps defined in the runbooks, and ensures incidents are enriched with required telemetry to enable rapid downstream diagnosis.
 
----
+Primary Responsibilities:
 
-# 6 — Runbook actions by severity (concise, copyable steps)
+Acknowledge and log incidents in ServiceNow within the defined Response Time SLA.
 
-## P1 (Major Incident) — quick runbook
+Perform initial triage to validate the incident (determine false positive, reproducible, severity).
 
-1. Mark incident **P1** in ServiceNow and set Major Incident flag.
-2. Assign Incident Commander (IC); IC creates war room and incident bridge (record the bridge link in ticket).
-3. Notify stakeholders: COMMS, MGT, Architect (11), Vendor (12), Platform Owner (13).
-4. Gather telemetry: `kubectl get nodes -o wide`, `kubectl get pods --all-namespaces`, control-plane logs, monitoring dashboard snapshots. Attach to ticket.
-5. Apply immediate mitigation (scale replicas, restart kube-components, isolate node) from approved emergency playbooks. Document every step in ticket.
-6. If vendor involvement required: open vendor SR, include ticket number and attach logs, and request vendor priority escalation.
-7. After service restored: IC coordinates verification, records exact time of recovery, and moves to RCA planning.
+Execute documented L1 procedures and common runbook steps (check node and pod status, confirm monitoring alert details, gather relevant logs, and capture screenshots).
 
-## P2 (High)
+Populate ServiceNow incident fields completely: short description, impacted service CI, impacted namespace/pod/node, monitoring alert links, attached artifacts (logs, screenshots), initial triage notes, and suggested priority.
 
-1. L2 owns ticket; perform focused troubleshooting: pod logs, events, recent deployments.
-2. Apply known fix or workaround; if not available escalate to L3.
-3. Update customer and Platform Owner (13) periodically (every agreed cadence).
-4. If root cause is config/design, involve Architect (11) and schedule change as per CAB.
+Apply straightforward known fixes and documented workarounds. If a known fix is used, document precisely which KB/playbook was applied and the resolution steps.
 
-## P3 / P4
+Route and escalate to the correct L2 group when rising above L1 scope, including providing summary of actions taken and artifacts collected.
 
-* Follow regular operational procedures; create change requests for fixes that require scheduled maintenance.
+
+Escalation Criteria to L2 (Formalized):
+
+The required remediation is outside L1 authority or documented procedures.
+
+Resolution has not been reached within the defined L1 time threshold (per SLA).
+
+Investigation requires system-level credentials or changes (for example, kube-adm level or control-plane intervention).
+
+Incident involves customer-facing outage requiring immediate, experienced operational intervention.
+
+
 
 ---
 
-# 7 — ServiceNow configuration recommendations (fields, automation)
+3.2 Level 2 (L2) — Team Leads (Advanced Technical Support)
 
-Required fields to include on incident form (makes escalation consistent):
+Role Description (Formal):
+L2 engineers are subject matter experts for platform operations. They possess in-depth knowledge of cluster operations, networking, storage, CI/CD interactions, and pipeline behavior. L2 leads the effort for sustained remediation work beyond initial triage and ensures appropriate technical escalation, documentation, and temporary mitigation when necessary.
 
-* Short description (auto: alert summary)
-* Impact (select from dropdown)
-* Urgency (auto-map to priority)
-* Priority (auto)
-* CI / Service: `Atlas-K8s`
-* Affected namespace/pod/node (text)
-* Monitoring alert ID / Link (URL)
-* Attach: logs, diagnostic snapshots
-* Incident Commander (user)
-* Stakeholders to notify: checkboxes (Architect (11), Vendor (12), Owner (13), COMMS, MGT)
-* Major Incident: boolean
-* Vendor SR link & vendor case ID
+Primary Responsibilities:
 
-Automations:
+Receive escalations from L1 with complete context and artifacts.
 
-* When `Major Incident` checked → auto-assign IC role, create incident bridge, trigger COMMS notification, open a parent Major Incident record, and page on-call groups.
-* Integrate monitoring alerts to auto-create incidents with pre-filled fields and severity mapping.
+Perform deep diagnostics (pod logs, kubelet and kube-api logs, CNI traces, storage health, monitoring timelines).
 
----
+Validate environment and reproduce the failure in controlled conditions where possible.
 
-# 8 — Communication templates (short)
+Apply intermediate-level remediation steps and orchestrate safe operational fixes (draining or cordoning nodes, increasing replicas, rolling restart of pods, temporary traffic reroutes).
 
-**ServiceNow comment — initial acknowledgement**
+Coordinate cross-team actions (database teams, network ops, CI/CD owners) and create action items in ServiceNow where those teams must act.
 
-> Thank you — we have received the report and opened Incident INC-XXXXX (Priority P2). Platform Operations is triaging. Next update in 30 minutes unless otherwise notified.
+Engage the Architect or Evangelist (per governance) when architectural implications or emergency change approvals are required.
 
-**Major incident public status update**
 
-> Incident INC-XXXXX (P1): We are aware of the Atlas Kubernetes outage affecting [service list]. Incident Commander: [name]. Mitigation actions are in progress. Next update: in 15 minutes or sooner.
+Escalation Criteria to L3:
 
-**Vendor escalation note**
+Situation demands code-level fixes or engineering changes not safe to perform in production without dev involvement.
 
-> Vendor SR opened: [vendor_case_id]. Summary: [brief summary]. Logs and diagnostics attached in ServiceNow. Please assign to Tier 2 support and prioritize as P1.
+Root cause appears architectural (persistent design issue) or requires patching platform components.
+
+Vendor dependencies are implicated (hardware, proprietary drivers, or vendor-supplied controllers).
+
+
 
 ---
 
-# 9 — Evidence & logs to collect (attach to ticket)
+3.3 Level 3 (L3) — Evangelist / Platform Engineering (Deep Technical & Architecture)
 
-* `kubectl get nodes -o wide` and `kubectl describe node <node>`
-* `kubectl get pods --all-namespaces -o wide` and `kubectl logs <pod>` for failing pods
-* Control plane logs (kube-api, etcd) and timestamps
-* Monitoring graphs (CPU, memory, network, etc.) and alert IDs
-* Recent GitLab CI pipeline deploys (commit IDs) that targeted affected namespaces
-* Any error screenshots or console outputs
+Role Description (Formal):
+L3 provides the highest level of operational expertise and system ownership for platform evolution and permanent problem resolution. The Evangelist acts as a cross-functional engineering liaison who synthesizes operational findings into long-term risk reduction and platform improvements.
 
----
+Primary Responsibilities:
 
-# 10 — Post-incident actions (RCA & continuous improvement)
+Lead root cause analysis for complex or recurring incidents.
 
-* Within 48–72 hours: owner (Platform Owner 13) schedules RCA meeting with Architect (11), L3, Vendor (12) if involved.
-* Produce an RCA document: timeline, root cause, contributing factors, corrective actions, owners and due dates. Attach to ServiceNow incident.
-* Track follow-up change requests and close action items in a follow-up ticket; add updates to KB / SOP if runbook adjustments are needed.
+Develop and validate permanent fixes, patches, or code changes, collaborating with platform engineering and development teams.
 
----
+Approve or propose architectural changes; define mitigation strategies and verify compatibility and safety of emergency fixes.
 
-# 11 — Example escalation matrix (compact, copy into KB)
+Author and evolve playbooks and KBs to reflect permanent fixes and improvements.
 
-1. **L1** — Validate, basic fixes — If unresolved in 15 min → → **L2**
-2. **L2** — Platform ops troubleshooting — If unresolved or platform impact → → **L3** & notify **Architect (11)**
-3. **L3** — Deep platform troubleshooting — If hardware or vendor-owned component → → **Vendor (12)** and **Platform Owner (13)**
-4. **Major Incident** — Incident Commander appointed, COMMS & MGT notified immediately
+Serve as the escalation point for vendor coordination where deep component or third-party involvement is required.
+
+
 
 ---
 
-# 12 — Quick checklist (for the person who receives an incident)
+3.4 Medtronic Development / Architecture Team
 
-* [ ] Is the alert valid (false positive)?
-* [ ] Create ServiceNow incident with required fields and attach telemetry.
-* [ ] Set Priority based on impact/urgency matrix.
-* [ ] Notify L2 / on-call platform ops.
-* [ ] Escalate to Architect (11) if design/config change or P1.
-* [ ] If hardware or vendor software implicated → open vendor SR (12) and attach logs.
-* [ ] For P1 → start war room, assign IC, notify COMMS and MGT.
-* [ ] Document every troubleshooting step in ServiceNow.
-* [ ] After closure, schedule RCA with Architect (11), Vendor (12) and Platform Owner (13).
+Role Description (Formal):
+This team defines long-term architectural direction, approves changes with systemic impact, and ensures that operational fixes align with the strategic platform roadmap.
+
+Primary Responsibilities:
+
+Review critical incident remediation proposals that have long-term architectural impact.
+
+Approve emergency changes when required and coordinate formal follow-up through the change advisory process (CAB).
+
+Participate in RCAs for incidents with architectural root causes and assign remediation owners.
+
+
 
 ---
 
-If you want, I can now:
+3.5 Vendor Support
 
-* produce a printable one-page flowchart (text or diagram code) of the escalation path, or
-* draft the actual ServiceNow form templates and notification rules (exact field names and example values), or
-* write the exact Major Incident checklist that can be copy-pasted into the Runbook.
+Role Description (Formal):
+Vendors are engaged when incidents involve third-party hardware, managed services, or proprietary software. Their contractual SLAs and escalation processes apply in tandem with internal incident management.
 
-Pick one and I’ll produce it next (I’ll proceed immediately with what you choose).
+Primary Responsibilities:
+
+Accept vendor SRs (service requests) raised by the internal team.
+
+Provide vendor diagnostics, patches, or action plans.
+
+Maintain vendor case IDs and timelines in the ServiceNow incident record.
+
+Coordinate with L2/L3 to validate vendor’s proposed fix before production application.
+
+
+
+---
+
+4. Stakeholders and Governance
+
+4.1 Technical Stakeholders
+
+Support Team (L1 / L2 / L3)
+
+Evangelist (Platform & Source Code)
+
+Team Leads (Kubernetes, Source Code)
+
+Support Engineers (Kubernetes, Source Code)
+
+Medtronic Architecture Team
+
+Database Team
+
+Infrastructure & Network Operations
+
+Vendor Technical Contacts
+
+
+4.2 Management-Level Stakeholders
+
+Support Manager / Operations Manager — operational performance, resourcing, SLA compliance.
+
+Product Owner / Service Owner — business priorities, customer communication, accept sign-offs.
+
+Program / Delivery Manager — program-level coordination and escalation for multi-project impacts.
+
+Customer Success / Business Relationship Manager — client-facing communications regarding SLA performance and escalations.
+
+EM Lead / EM Support — governance, project execution oversight, risk and change approvals.
+
+
+4.3 Named Role Assignments (Current)
+
+Juan Pablo Mosquera — Platform Evangelist (Source Code)
+
+William Urrea — Support Engineer (Source Code)
+
+Daniel Cure — SER (Kubernetes)
+
+Sebastian Guerrero — Support Engineer (Kubernetes)
+
+Cristian Fandiño — Support Engineer (Kubernetes)
+
+
+(These role assignments should be kept current in the Support Roster and on-call schedules in ServiceNow.)
+
+
+---
+
+5. Incident Management Process (Formal Flow)
+
+This process is the institutionalized lifecycle for incident handling. It must be enforced by policy, supported by ServiceNow workflows, and embedded into operational runbooks.
+
+1. Detection and Intake
+
+Incident is either auto-created by monitoring or manually reported by a user. The incident must include automatic enrichment (monitoring alert IDs, metrics, timestamps).
+
+ServiceNow fields should be prepopulated where possible (impact, urgency, CI).
+
+
+
+2. Classification and Prioritization
+
+Apply priority mapping (Impact x Urgency → Priority). Suggested priority mapping: P1 (Critical), P2 (High), P3 (Medium), P4 (Low).
+
+Tag incident with service CI = Atlas-K8s and affected namespace/pod/node.
+
+
+
+3. Assignment to L1
+
+L1 acknowledges and sets initial status. L1 must perform the required L1 checklist within the Response Time SLA.
+
+
+
+4. L1 Triage
+
+Validate, eliminate false positives, and execute known fixes. If resolved, perform closure steps and KB updates where applicable.
+
+
+
+5. L2 Escalation & Investigation
+
+For unresolved or platform-level incidents, escalate to L2 with all collected artifacts. L2 executes advanced diagnostics and temporary mitigations.
+
+
+
+6. L3 / Vendor Engagement
+
+If the incident requires code changes, architecture decisions, or vendor intervention, escalate to L3/Evangelist and open vendor SRs with complete logs and ServiceNow linkage.
+
+
+
+7. Mitigation and Resolution
+
+Apply fix or workaround. Verify service restoration across affected dimensions (functional tests, monitoring metrics, user confirmation).
+
+
+
+8. Verification and Closure
+
+Confirm resolution, update incident with closure notes and remediation steps, and set status to Resolved. If further work is required (change requests), create follow-up CRs/PROB tickets.
+
+
+
+9. Post-Incident Review (RCA)
+
+For P1/P2 or repeat incidents, schedule RCA within 48–72 hours. Produce an RCA document that includes timeline, root cause, corrective and preventive actions, owners, and due dates. Attach RCA to the incident record.
+
+
+
+
+
+---
+
+6. Service Level Agreements (SLAs) — Formal Definitions & Suggested Targets
+
+> Note: The numerical targets below are recommended baseline values and should be validated/negotiated with the client and reflected in contractual SLAs.
+
+
+
+6.1 Response Time (SLA Definition)
+
+Formal Definition:
+Response Time measures the elapsed time between the point at which an incident is assigned to the support group in ServiceNow and the moment when a support agent takes ownership and marks the incident status as Work in Progress.
+
+Start time: Incident assignment timestamp to one of the relevant support groups.
+Stop time: Incident status transition to Work in Progress with an assigned agent.
+
+Suggested Targets:
+
+P1 (Critical): ≤ 15 minutes
+
+P2 (High): ≤ 30 minutes
+
+P3 (Medium): ≤ 2 hours
+
+P4 (Low): ≤ 8 business hours
+
+
+Communication Template (Initial Update — English):
+
+> “Hi, my name is [First Last]. Thank you for reaching out. I will be working on your incident and will provide the next update within [cadence].”
+
+
+
+Template (Spanish):
+
+> “Hola, mi nombre es [Nombre]. Gracias por contactarnos. Estaré trabajando en su incidente y proporcionaré la siguiente actualización en [plazo].”
+
+
+
+6.2 Resolution Time (SLA Definition)
+
+Formal Definition:
+Resolution Time measures total elapsed time from assignment to the support group until the incident status is set to Resolved in ServiceNow. The SLA may be paused for valid waiting states.
+
+Start time: Incident assignment to the support group.
+End time: Incident state transitions to Resolved.
+
+SLA Pause States (Allowed only when justified):
+
+Awaiting Customer Feedback
+
+Pending Change
+
+Awaiting Vendor
+
+Pending Vendor Information
+
+
+Suggested Targets:
+
+P1 (Critical): Initial mitigation within 1 hour; full resolution within 4–8 hours (depending on severity).
+
+P2 (High): Full resolution or workaround within 4 hours where feasible; otherwise defined remediation plan in 24 hours.
+
+P3 (Medium): Resolution within 2 business days.
+
+P4 (Low): Next available maintenance window or backlog schedule.
+
+
+
+---
+
+7. Escalation Model — Formal Matrix
+
+This section codifies when and how to escalate, who to notify, and expected timelines.
+
+7.1 Escalation Triggers
+
+Time-based escalation: If the incident remains in a given state past the SLA threshold, escalate to the next support level and notify management.
+
+Impact-based escalation: If incident causes broad service impact (multiple namespaces, >x% customers, production outage), immediately escalate to declare P1, assign Incident Commander, and notify COMMS and Management.
+
+Complexity escalation: If incident requires code changes, architecture evaluation, or vendor involvement, escalate to L3/Evangelist and Vendor.
+
+
+7.2 Notification Recipients (Example)
+
+Immediate: Assigned L2 on-call, Platform Owner (Service Owner), Team Lead.
+
+P1: Incident Commander, Evangelist (L3), Architect, Vendor contact, COMMS, Support Manager, Delivery Manager.
+
+Stakeholder escalation path: L1 → L2 → L3 / Evangelist → Architect / EM Lead → Program/Delivery Manager → Executive Sponsor.
+
+
+7.3 Escalation Communication Cadence for Major Incidents (P1)
+
+Initial notification: Immediate on declaration.
+
+Status updates: Every 15 minutes until mitigation is applied; after mitigation, every 30–60 minutes until stable.
+
+Post-incident: RCA scheduled within 48–72 hours with cross-functional attendance.
+
+
+
+---
+
+8. Communications and War Room Procedures
+
+8.1 War Room Activation
+
+When: A Major Incident is declared (P1) or when multiple services are critically impacted.
+Who activates: Incident Commander, or the on-call L3/Evangelist in absence of designated IC.
+How to activate: Create an incident bridge (conference call / chat channel) and post the bridge link in the ServiceNow incident. Notify stakeholders per the escalation matrix.
+
+8.2 Communication Roles
+
+Incident Commander (IC): Single point responsible for overall coordination, decisions on mitigation, and approvals for emergency changes.
+
+Scribe: Documents actions, timestamps, decisions, and rollbacks in the ServiceNow incident notes.
+
+Technical Lead(s): L2/L3 engineers executing mitigations.
+
+COMMS Lead: Prepares external/internal updates and status page entries.
+
+Vendor Liaison: Coordinates with vendor and tracks vendor SRs/case IDs.
+
+
+8.3 Standard Status Update Template
+
+Header: Incident INC-XXXXX — [Short description] — P[1/2/3/4]
+Time: [UTC / Local timestamp]
+Summary: [Brief description of issue and impact]
+Current Status: [What is being done]
+Actions Taken: [List each action, owner, and timestamp]
+Next Steps: [Owners and ETA]
+Bridge / Chat Link: [URL]
+Scribe: [Name]
+
+
+---
+
+9. Knowledge Management & Playbooks
+
+9.1 KB Structure and Governance
+
+KB Article Types: SOPs, Playbooks (operational runbooks), Troubleshooting Guides, Post-Incident RCA Summaries, Architecture Notes.
+
+Ownership: Each KB article must have an assigned owner (Team Lead or Evangelist). Owners are responsible for annual reviews or updates after significant incidents.
+
+Quality Gate: KB articles must include: purpose, scope, preconditions, step-by-step actions, rollback steps, verification, required artifacts, and the contact list.
+
+
+9.2 Playbook Example (L1 Triage)
+
+Preconditions: Incident with CI = Atlas-K8s and severity P2/P3.
+
+Step 1: Confirm monitoring alert with timestamp and link.
+
+Step 2: Run kubectl get nodes -o wide and kubectl get pods --all-namespaces. Attach outputs.
+
+Step 3: Check last GitLab deployment (commit IDs) for affected namespaces.
+
+Step 4: If pod CrashLoopBackOff, capture logs kubectl logs <pod> --previous.
+
+Step 5: If fix was applied, test application endpoints; attach screenshots and monitoring snapshots.
+
+Step 6: If unresolved after X minutes, escalate to L2 with attached artifacts and triage notes.
+
+
+
+---
+
+10. Change Management & Emergency Changes
+
+All changes follow the Change Management process in ServiceNow.
+
+Emergency change policy: The Incident Commander may authorize emergency changes during a P1 given approval from the Architect or EM Lead; such changes must be recorded as Emergency Change records and reviewed in post-incident CAB.
+
+Permanent fixes must be routed through the standard change process (CAB) with risk assessment and rollback plan.
+
+
+
+---
+
+11. Security, Compliance & Data Privacy
+
+Any incident involving suspected security compromise must be managed by the Security Incident Response process immediately and escalated to the security team.
+
+Logs and artifacts stored in ServiceNow must comply with data retention and privacy policies; remove/obfuscate PII before sharing externally.
+
+Vendor data movements or debug sessions must be authorized and logged.
+
+
+
+---
+
+12. Operational Metrics, Reporting & Continuous Improvement
+
+12.1 Metrics to Track (Formal)
+
+SLA Compliance: % incidents meeting Response and Resolution SLAs (by priority).
+
+MTTR: Mean Time To Repair (segmented by service and priority).
+
+MTTA: Mean Time To Acknowledge.
+
+Incident Volume: Trending by week/month and by root cause category.
+
+Repeat Incidents: Count and % of recurring incidents (same root cause within defined window).
+
+KB Coverage: % of common incidents with documented KB/playbook.
+
+Change Success Rate: % emergency and regular changes with rollback or incident occurrence.
+
+
+12.2 Reporting Cadence
+
+Daily: Dashboard review and handover notes.
+
+Weekly: Trend report, top 5 recurring issues, pending action items.
+
+Monthly: SLA performance report and executive summary to Program/Delivery Manager.
+
+Quarterly: Strategic review with Architecture, Product, and Executive stakeholders to track systemic improvements.
+
+
+
+---
+
+13. Training, Onboarding & Knowledge Transfer
+
+Onboarding checklist for new support engineers: Access provisioning (ServiceNow, cluster kubeconfig with least privilege), review of playbooks and SOPs, shadowing sessions (two weeks) with L2/L3, and assessment.
+
+Continuous training: Scheduled knowledge-sharing sessions monthly; incident walkthroughs and RCA lessons learned sessions after major incidents.
+
+Certification: Encourage Kubernetes certification paths and internal lab exercises for hands-on scenario practice.
+
+
+
+---
+
+14. Roles: Expanded Formal Descriptions
+
+14.1 EM Lead (Executive Manager Lead)
+
+Responsibilities (Formal):
+Oversee program governance, ensure alignment between operations and business objectives, approve high-impact changes, manage budgets and resource allocations, and orchestrate cross-team escalations when strategic decisions are required.
+
+14.2 EM Support
+
+Responsibilities (Formal):
+Coordinate local project setup, manage resource plans, provide financial and operational inputs for project management, and ensure consistent operational execution at the local level.
+
+14.3 Evangelist
+
+Responsibilities (Formal):
+Act as the platform champion; bridge developer experience and operational requirements; promote best practices for CI/CD pipelines and self-service patterns; advise on platform adoption and continuous improvement initiatives.
+
+14.4 Team Leads (Kubernetes & Source Code)
+
+Responsibilities (Formal):
+Drive technical direction for their respective domains, own runbook content and team-level KB, lead incident handling for esc
