@@ -543,4 +543,72 @@ Act as the platform champion; bridge developer experience and operational requir
 14.4 Team Leads (Kubernetes & Source Code)
 
 Responsibilities (Formal):
-Drive technical direction for their respective domains, own runbook content and team-level KB, lead incident handling for esc
+Drive technical direction for their respective domains, own runbook content and team-level KB, lead incident handling for escalations, and coordinate with architecture for design decisions.
+14.5 Support Engineers (Kubernetes & Source Code)
+Responsibilities (Formal):
+Deliver day-to-day operational support, execute runbooks, escalate appropriately, and contribute to KB content from operational lessons learned.
+15. Appendix — Templates & Examples
+15.1 ServiceNow Incident Fields & Example Values
+Field
+Example Value / Notes
+Short description
+“Atlas-K8s: namespace X – API errors / pod CrashLoopBackOff”
+CI / Service
+Atlas-K8s
+Impact
+“Multiple customers / Production”
+Urgency
+High
+Priority
+P1 / P2 / P3 / P4
+Assigned group
+Infra-Kubernetes Platform IT Support-Global-L1
+Assigned to
+[Agent username]
+Status
+New → In Progress → Resolved → Closed
+Monitoring alert link
+URL to Grafana/Datadog alert
+Attached artifacts
+Logs, screenshots, kube outputs, pipeline commit IDs
+Incident Commander
+[Name] (for P1)
+Vendor SR link
+[Vendor case URL]
+Major Incident flag
+Checkbox (true for P1)
+15.2 Initial Update — ServiceNow Comment (Formal)
+English:
+Hello, my name is [Full Name], and I will be your point of contact for this incident. We have received your report and begun initial triage. Current activity: [short summary of what you checked]. Next update: [time cadence]. Incident reference: INC-XXXXX.
+Spanish:
+Hola, mi nombre es [Nombre Completo], seré su contacto para este incidente. Hemos recibido su reporte y comenzado la investigación inicial. Actividad actual: [resumen corto]. Siguiente actualización: [plazo]. Referencia del incidente: INC-XXXXX.
+15.3 Vendor Escalation Note (ServiceNow Comment)
+Vendor SR opened: [VendorCaseID]. Summary: [Short technical summary]. Attached: logs, diagnostics, timeline. Please prioritize per P1 status. Contact: [Vendor escalation contact]. Link: [URL]
+15.4 RCA Template (Required Sections)
+Title & Incident ID
+Date/Time window (detection → resolution)
+Summary (one paragraph)
+Impact (services, customers, duration)
+Timeline of events (timestamped)
+Root cause (technical and contributing factors)
+Corrective actions taken (short and long term)
+Action items (owner, due date)
+Lessons learned & KB/Playbook updates required
+Approval & distribution list
+15.5 Post-Incident Checklist
+Verify all systems are stable and monitored for reoccurrence.
+Close any vendor SRs if resolved, or keep vendor SRs linked for pending actions.
+Create follow-up CR/PROB items with clear owners and schedules.
+Update or create KB/playbook reflecting the resolution.
+Schedule RCA and invite required stakeholders (L2/L3, Architect, Vendor as needed).
+Share executive summary with management and Customer Success.
+16. Continuous Improvement & Governance
+Maintain a quarterly governance meeting that reviews SLA performance, recurring incidents, and strategic remediation progress.
+Each quarter, prioritize technical debt and platform hardening items in the roadmap to reduce incident volume.
+Maintain a living KB and require owners to review critical playbooks within 30 days of any P1/P2 incident.
+17. Final Notes & Implementation Next Steps
+Operationalize ServiceNow: Ensure auto-creation of incidents from monitoring, field mappings, and escalation automations for the Major Incident flag.
+Populate Roster & On-Call Schedules: Maintain current named roles and contacts in ServiceNow and in the emergency contact sheets.
+Publish KB and Playbooks: Ensure L1/L2 have access and that playbooks are versioned with change history.
+Run a Tabletop Exercise: Validate the model by running a Major Incident tabletop exercise with all stakeholders.
+Agree SLA Targets: Review recommended SLA targets with the customer, codify them into the Service Level Agreement, and implement monitoring for SLA compliance.
