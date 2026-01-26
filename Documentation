@@ -1,3 +1,73 @@
+Understood 👍
+Below is the revised and expanded table for Management-Level Stakeholders, now explicitly incorporating the named roles you provided.
+Where a named individual is not formally assigned to a management role, the table clearly states “TBD / As Assigned” to keep it audit-safe and realistic.
+
+
+---
+
+4.2 Management-Level Stakeholders (Including Named Roles)
+
+Role	Named Role(s)	Primary Responsibilities	Involvement Level	Escalation Authority
+
+Support Manager / Operations Manager	TBD / As Assigned	Oversees day-to-day operational performance, ensures compliance with SLAs, manages staffing and on-call rotations, reviews incident trends, enforces operational standards, and coordinates Major Incident (MI) execution.	Continuous (Operational)	Authorized to escalate incidents to executive leadership and trigger Major Incident procedures.
+Service Owner / Product Owner	TBD / As Assigned	Owns the Kubernetes (Atlas) service from a business and service lifecycle perspective, defines priorities, validates customer impact, approves service-level decisions, and ensures alignment with business objectives.	High (Strategic & Operational)	Can reprioritize incident resolution efforts and approve service-impacting decisions.
+Program / Delivery Manager	TBD / As Assigned	Coordinates cross-team dependencies, manages delivery risks, ensures alignment between operational activities and program milestones, and facilitates escalations across technology and business domains.	Medium to High (Coordination)	Escalates systemic or cross-domain issues to senior management and governance committees.
+Executive Manager (EM Lead)	EM Lead (Role Defined)	Provides executive oversight of the operational model, ensures alignment with governance standards, manages financial and resource accountability, and removes organizational blockers during major incidents.	High (Executive Oversight)	Final escalation authority for operational, contractual, and architectural decisions during critical incidents.
+EM Support (Regional / Local Management)	EM Support (Role Defined)	Manages regional or local execution, supports resource coordination, ensures adherence to operational standards, and provides cost and execution visibility to leadership.	Medium (Execution Support)	Authorized to escalate issues within regional or operational boundaries.
+Customer Success / Business Relationship Manager	TBD / As Assigned	Acts as the primary customer-facing representative, manages communications during incidents, aligns expectations, and ensures customer satisfaction during and after incident resolution.	Medium (Customer-Facing)	Escalates customer-impacting concerns to service owners and executive stakeholders.
+Platform Evangelist (L3)	Juan Pablo Mosquera	Leads deep technical analysis, architectural alignment, platform advocacy, and long-term solution design. Acts as the bridge between platform engineering, development teams, and governance bodies.	High (Technical Leadership)	Authorized to escalate architectural risks and request vendor or executive involvement.
+Kubernetes Support Engineers	Daniel Cure (SER), Sebastian Guerrero, Cristian Fandiño	Provide advanced operational support for Kubernetes platforms, including incident investigation, remediation execution, and validation of fixes under guidance of Team Leads and Evangelist.	High (Operational Execution)	Escalate unresolved or systemic issues to Team Leads or Evangelist.
+Source Code Support Engineers	William Urrea	Manages operational support for GitLab and Artifactory platforms, executes troubleshooting, supports CI/CD pipelines, and contributes to incident resolution and prevention activities.	High (Operational Execution)	Escalates complex issues to Source Code Team Lead or Evangelist.
+Architecture Governance / Medtronic Development Team	As Defined by Medtronic	Ensures platform coherence, reviews architectural risks, approves emergency or long-term design changes, and aligns operational solutions with enterprise architecture standards.	On Demand (Strategic)	Authority to approve or reject architectural changes and emergency deviations.
+Vendor Support	Vendor-Specific	Provides third-party diagnostics, patches, and product expertise for SaaS, PaaS, proprietary platforms, or hardware-related incidents.	On Demand	Escalation authority limited to vendor-owned components and contractual obligations.
+
+
+
+---
+
+Governance and Audit Note
+
+Named individuals are included only where roles are operationally assigned.
+
+“TBD / As Assigned” ensures compliance with governance, audits, and role rotation policies.
+
+This table is suitable for:
+
+Operational Model documentation
+
+SLA and OLA definitions
+
+ServiceNow role alignment
+
+Governance and audit reviews
+
+
+
+
+---
+
+If you want, next I can:
+
+Produce long-form role descriptions for each named role (1–2 pages total)
+
+Build a RACI matrix tied to ServiceNow assignment groups
+
+Align this table visually with the Medtronic Governance Model diagram
+
+
+Just say the word.
+
+
+
+
+
+
+
+
+
+
+
+
 # 1. Application Onboarding – Tools & Access Prerequisites
 
 ## 1.1 Purpose and Scope
