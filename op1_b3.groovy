@@ -1,1 +1,1 @@
-https://<HOST>:<PORT>/ibm/iis/api/dscdesignerapi/j_security_check
+https://infosphere-server.company.com:9443/ibm/iis/api/dscdesignerapi?api=getDSProjects&hostName=infosphere-server.company.com&getFullOutput=false
