@@ -64,6 +64,6 @@ pipeline {
 }
 
 Documentacion relevante
-https://documentation.sas.com/doc/en/lrmeta/9.4/?spm=a2ty_o01.29997173.0.0.76825171470sK4
+SAS 9.4 Language Interfaces to Metadata
 
   
