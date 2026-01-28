@@ -348,3 +348,375 @@ Once access is granted:
   - `aws-it-wasobserv-monitor-prod-nat`
 
 Engineers should familiarize themselves with these pipelines and IaC projects as part of application onboarding.
+
+
+
+
+
+
+
+
+
+
+
+
+
+Great — below are formal, detailed descriptions for the Operational Cycles (Daily / Weekly / Monthly).
+Each section includes: purpose, owners, attendees, cadence, agenda, expected outputs/artifacts, links to SLAs/KPIs, and example checklist items you can copy into runbooks or ServiceNow knowledge articles.
+
+
+---
+
+6. Operational Cycles — Formal Descriptions
+
+These operational cycles structure recurring operational activity to ensure stability, SLA compliance, knowledge hygiene, and continuous improvement for the Atlas Kubernetes platform and associated services.
+
+
+---
+
+6.1 Daily Operations — “Shift-to-Shift” (Cadence: daily / each shift)
+
+Purpose
+Daily operations focus on rapid detection of degradation, maintaining service availability, ensuring timely handovers, and tracking SLA conformance. This is the tactical heartbeat of operations: catch problems early, ensure continuity across shifts, and avoid SLA breaches.
+
+Owner
+Support Manager / Operations Manager (operational responsibility)
+Day-to-day facilitation: L1 Lead (on-shift), L2 lead (on-call as needed).
+
+Attendees
+
+L1 shift lead (required)
+
+Assigned L2 on-call (as needed)
+
+L3/Evangelist (optional for known ongoing incidents)
+
+Scribe (rotating L1) for handover notes
+
+
+Cadence & Duration
+
+Frequency: Daily, at each shift start (or a single daily handover meeting if single-shift)
+
+Duration: 15–30 minutes (concise)
+
+
+Standard Agenda
+
+1. Quick status: items open from prior shift (top 3)
+
+
+2. Dashboard review: active alerts, trending spikes, cluster health (nodes, control-plane, critical namespaces)
+
+
+3. SLA tracker: incidents approaching Response/Resolution SLAs — assign owners for immediate action
+
+
+4. High-severity incidents: brief review and explicit next steps (if any)
+
+
+5. Workload / planned maintenance alerts for the day (scheduling conflicts)
+
+
+6. Handover notes: commitments, owners, pending actions for the next shift
+
+
+
+Expected Outputs / Artifacts
+
+Updated Shift Handover document (ServiceNow or shared doc) with:
+
+Open incidents and current owners
+
+Actions in progress and blockers
+
+SLAs at risk (incident IDs)
+
+
+Quick actions assigned (owner + ETA)
+
+Update to ServiceNow incident comments where needed (to reflect current status)
+
+
+KPIs / Links to SLAs
+
+MTTA (mean time to acknowledge) for new incidents during shift
+
+Number of incidents crossing Response SLA during shift
+
+
+Checklist (Daily)
+
+[ ] Confirm monitoring dashboards are accessible and healthy.
+
+[ ] Validate any new automated incidents; dismiss false positives or enrich ticket with artifacts.
+
+[ ] Identify incidents approaching SLA thresholds and escalate per escalation matrix.
+
+[ ] Ensure open incidents have clear owners and next steps recorded.
+
+[ ] Update KB entry pointers for any recurring quick fixes applied.
+
+
+
+---
+
+6.2 Weekly Operations — “Tactical Sync” (Cadence: weekly)
+
+Purpose
+Weekly operations focus on trend analysis, knowledge hygiene (KB/playbook maintenance), cross-team synchronization, and backlog management. The objective is to move from reactive firefighting toward proactive stability improvements.
+
+Owner
+Support Manager / Operations Manager (facilitator)
+Technical facilitation: L2 Team Lead (Kubernetes / Source Code) and Evangelist for technical agenda items.
+
+Attendees
+
+Support Manager / Ops Manager (required)
+
+L1 Lead and representatives (rotation)
+
+L2 Team Leads (Kubernetes, Source Code) (required)
+
+Evangelist / L3 (as needed)
+
+Representatives from Database, Network, or other dependent teams (as required)
+
+Scribe for minutes and action item tracking
+
+
+Cadence & Duration
+
+Frequency: Weekly (same day/time each week)
+
+Duration: 45–60 minutes
+
+
+Standard Agenda
+
+1. Review weekly metrics and trends (incident count by severity, recurring categories)
+
+
+2. Review upcoming planned changes/maintenance windows and coordinate cross-team impacts
+
+
+3. KB / Playbook updates: identify articles requiring updates due to incidents or changes
+
+
+4. Deep-dive on top 1–2 recurring problems (root-cause summary & mitigation action items)
+
+
+5. Ticket backlog: review aging tickets and assign owners/priorities
+
+
+6. Training/knowledge share spotlight (short 10–15 min session by L2/L3)
+
+
+7. Action item review from previous weekly meeting
+
+
+
+Expected Outputs / Artifacts
+
+Weekly incident trend report (short dashboard snapshot): top 5 incident causes, MTTR, SLA compliance.
+
+KB/update list with owners and due dates.
+
+Backlog action list with owners and deadlines.
+
+Short knowledge-share note added to KB (if session given).
+
+
+KPIs / Links to SLAs
+
+Weekly SLA compliance % (by P1/P2/P3)
+
+Number of recurring incidents reduced vs previous period
+
+KB coverage (% high-frequency incidents documented)
+
+
+Checklist (Weekly)
+
+[ ] Publish a one-page weekly incident summary to stakeholders.
+
+[ ] Assign owners for the top 3 action items (KB updates, technical fixes).
+
+[ ] Ensure any planned platform changes are coordinated and communicated.
+
+[ ] Verify that tickets nearing SLA resolution have assigned owners and plans.
+
+[ ] Record knowledge-share sessions and add to KB.
+
+
+Templates / Example Deliverable
+
+Weekly one-page dashboard PDF containing: total incidents, incidents by severity, MTTR, SLA compliance, top 3 root-cause categories, actions logged.
+
+
+
+---
+
+6.3 Monthly Operations — “Governance & Performance Review” (Cadence: monthly)
+
+Purpose
+Monthly cycles are governance and performance-focused: deeper metric reporting, SOP/playbook reviews, structured knowledge sharing, and strategic alignment with product/ program managers. Use monthly reviews to drive continuous improvement and roadmap prioritization.
+
+Owner
+Support Manager / Program Manager (co-chairs)
+Technical steward: Evangelist / Architect for playbook and architectural items.
+
+Attendees
+
+Support Manager / Ops Manager (required)
+
+Program/Delivery Manager (required)
+
+Product Owner / Service Owner (required)
+
+L2 Team Leads and Evangelist (required)
+
+Representatives from Database, Network, Security, and Vendor liaison (as required)
+
+Customer Success / Business Relationship Manager (invited)
+
+EM Lead / EM Support (as needed for governance items)
+
+
+Cadence & Duration
+
+Frequency: Monthly
+
+Duration: 60–90 minutes (longer for quarterly cross-functional reviews)
+
+
+Standard Agenda
+
+1. Executive summary: SLA performance and trend highlights for the month
+
+
+2. Metrics deep-dive: MTTR, MTTA, incident volumes, repeat incidents, KB coverage, change success rate
+
+
+3. SOP / Playbook review: items updated, items due for review, and proposed changes from RCAs
+
+
+4. Knowledge sharing: major incident RCA summaries and lessons learned (P1/P2)
+
+
+5. Backlog & roadmap: critical fixes, technical debt items, and scheduling for platform hardening
+
+
+6. Governance items: policy decisions, emergency change approvals, vendor escalations & contract concerns
+
+
+7. Action items and owners with due dates; set review dates
+
+
+
+Expected Outputs / Artifacts
+
+Monthly SLA and performance report sent to Management and Product Owners (PDF / dashboard link)
+
+Updated SOP/Playbook list with review status and owners
+
+RCA closure list with owners and target completion dates
+
+Decision log for architectural or governance decisions made during meeting
+
+
+KPIs / Links to SLAs
+
+Monthly SLA attainment percentage for each priority level.
+
+Number and percentage of P1/P2 incidents with completed RCA within 72 hours.
+
+KB maintenance rate (number of KB articles updated vs planned).
+
+Reduction in recurring incidents month-over-month.
+
+
+Checklist (Monthly)
+
+[ ] Publish the monthly SLA performance report to stakeholders.
+
+[ ] Validate completion or planned schedule for high-priority RCA action items.
+
+[ ] Approve or schedule required emergency or normal changes resulting from incident root causes.
+
+[ ] Ensure KB and SOP owners have scheduled updates per governance rules.
+
+[ ] Record meeting minutes and decision log in governance repository.
+
+
+Templates / Example Deliverable
+
+Monthly Performance Dashboard (PowerPoint or PDF) including:
+
+Top-line SLA metrics (response & resolution)
+
+Trend charts (incident volume, MTTR)
+
+Top 5 root causes and remediation status
+
+Roadmap items and owner commitments
+
+Executive summary: risks and recommended resource or process shifts
+
+
+
+
+---
+
+6.4 Cross-Cycle Integration & Handoff Rules
+
+Purpose
+Ensure that outputs from one cadence feed into the next: daily operational issues that require follow-up become weekly actions; weekly trend items that require strategic intervention become monthly governance decisions.
+
+Rules
+
+Any item escalated from Daily that requires >72 hours to resolve must be listed on the next Weekly agenda with an owner and target remedial plan.
+
+Weekly action items with strategic impact or budget/resource requests must be escalated to the Monthly governance agenda with required documentation.
+
+RCA findings (for P1/P2) generated during Post-Incident Review must be included in the next Monthly meeting and associated KB updates scheduled.
+
+
+Artifact Location & Ownership
+
+Shift Handover Documents: stored in the Operations shared folder and linked in ServiceNow incidents. Owner: L1 Lead.
+
+Weekly reports and KB update lists: stored in KB repository with owners assigned. Owner: L2 Lead.
+
+Monthly performance decks and decision logs: stored in Governance repository. Owner: Program Manager / Support Manager.
+
+
+
+---
+
+6.5 Suggested Tools & Dashboards
+
+ServiceNow: incident and action tracking, RCA linkage, change and emergency change records.
+
+Monitoring Dashboards (Grafana / Datadog / Prometheus): cluster health, alerting, MTTR/MTTA views.
+
+Shared Documentation (Confluence / SharePoint / KB system): SOPs, playbooks, meeting minutes, RCA docs.
+
+Communication Tools: Teams/Slack for war-room channels and daily handover chat logs.
+
+Reporting: Scheduled PDF exports of dashboards for Weekly and Monthly attachments.
+
+
+
+---
+
+If you want, I can:
+
+Produce copy-paste meeting agendas (Daily/Weekly/Monthly) in markdown or ServiceNow Task templates
+
+Generate PowerPoint-ready slides for the Monthly Report (layout + charts placeholders)
+
+Create ServiceNow workflow templates that create the weekly and monthly meeting tasks automatically from incidents approaching SLA
+
+
+Tell me which one you want next.
