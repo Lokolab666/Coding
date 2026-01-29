@@ -178,3 +178,23 @@ Si usas autenticación web (CAS, LDAP, etc.):
 - Registra todas las operaciones de creación de usuarios para auditoría
 
 ¿Necesitas que te ayude a desarrollar un script SAS completo con las funciones de metadata para tu caso específico?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Respecto a la automatización de permisos en los Paginated Reports de SSRS, investigué la opción de usar Stored Procedures + ODBC como alternativa a SOAP.
+Conclusión: No es viable ni recomendable por estos motivos de negocio:
+No existen Stored Procedures oficiales para gestión de seguridad
+⚠️ Riesgo alto de inconsistencias: Los cambios hechos directamente en la base de datos no se reflejan inmediatamente en SSRS, lo que podría generar permisos "fantasma" (asignados en BD pero no funcionales en la interfaz) o viceversa.
+⚠️ Pérdida de soporte de Microsoft: Si detectan modificaciones directas en la base de SSRS, Microsoft podría negarse a brindar soporte técnico en caso de incidentes críticos.
+⚠️ Sin auditoría: No quedaría registro en los logs oficiales de SSRS, imposibilitando rastrear quién asignó/eliminó permisos (riesgo para cumplimiento).
