@@ -1,236 +1,231 @@
-Para automatizar la asignación/eliminación del rol **Browser** a un usuario en **Paginated Reports de SQL Server 2019 Reporting Services (SSRS)** usando **Jenkins/Groovy**, debes interactuar con la **API de SSRS** (SOAP o REST). El proceso manual que describes se puede replicar programáticamente mediante los endpoints de seguridad (`Policies`).
+manage_ssrs_role.py
 
-## 🔑 Enfoque recomendado
+#!/usr/bin/env python3
+"""
+Gestiona rol Browser en SSRS 2019 usando API REST interna (NO SOAP)
+Ejecutar desde nodo Jenkins (NO requiere instalación en servidor SSRS)
+"""
+import os
+import sys
+import json
+import argparse
+import requests
+from requests_ntlm import HttpNtlmAuth
+from urllib.parse import quote
 
-SSRS 2019 expone dos APIs:
-- **SOAP** (`ReportService2010.asmx`): Soporta gestión completa de políticas (recomendado para este caso).
-- **REST** (`/api/v2.0/`): Limitado para gestión de roles en carpetas/reports (no soporta políticas granulares en todas las versiones).
-
-**Usaremos SOAP** ya que permite manipular políticas con precisión mediante los métodos `GetPolicies` y `SetPolicies`.
-
----
-
-## ✅ Solución con Groovy en Jenkins
-
-### 1. Requisitos previos
-- Habilitar autenticación **Windows/NTLM** o **Basic Auth** en SSRS.
-- Almacenar credenciales en **Jenkins Credentials** (tipo `Username with password`).
-- Tener instalado el plugin **HTTP Request Plugin** o usar librerías nativas de Groovy.
-
-### 2. Script Groovy (ejecutable en Jenkins Pipeline)
-
-```groovy
-@Grab('org.codehaus.groovy.modules.http-builder:http-builder:0.7.1')
-import groovyx.net.http.HTTPBuilder
-import static groovyx.net.http.Method.POST
-import static groovyx.net.http.ContentType.TEXT
-import groovy.xml.XmlUtil
-import jenkins.model.Jenkins
-import com.cloudbees.plugins.credentials.CredentialsProvider
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials
-import org.jenkinsci.plugins.plaincredentials.StringCredentials
-
-// ================= CONFIGURACIÓN =================
-def reportServerUrl = 'http://tu-servidor-ssrs/ReportServer' // Sin /ReportService2010.asmx
-def folderPath = '/TuCarpeta/PaginatedReports'                // Ruta del folder/report
-def targetUser = 'DOMINIO\\usuario'                           // Usuario a gestionar
-def assignRole = true // true = asignar Browser, false = eliminar
-def credentialId = 'ssrs-credentials'                         // ID credencial Jenkins
-
-// ================= OBTENER CREDENCIALES =================
-def creds = CredentialsProvider.findCredentialById(
-    credentialId,
-    StandardUsernamePasswordCredentials.class,
-    Jenkins.instance
-)
-if (!creds) {
-    error "Credencial '${credentialId}' no encontrada en Jenkins"
-}
-def username = creds.username
-def password = creds.password.getPlainText()
-
-// ================= FUNCIONES SOAP =================
-def createSoapEnvelope(action, body) {
-    return """<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-               xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-  <soap:Header>
-    <ServerInfoHeader xmlns="http://schemas.microsoft.com/sqlserver/2010/03/20/ReportServer" />
-  </soap:Header>
-  <soap:Body>
-    ${body}
-  </soap:Body>
-</soap:Envelope>"""
-}
-
-def callSoapService(endpoint, soapAction, envelope) {
-    def http = new HTTPBuilder("${reportServerUrl}/${endpoint}")
-    http.auth.basic username, password
+def get_item_id(base_url, username, password, item_path):
+    """
+    Obtiene el itemId interno de SSRS a partir de la ruta (/Carpeta/Reporte)
+    """
+    search_url = f"{base_url.rstrip('/')}/api/search/query"
     
-    def response = http.request(POST, TEXT) {
-        headers.'SOAPAction' = "\"http://schemas.microsoft.com/sqlserver/2010/03/20/ReportServer/${soapAction}\""
-        headers.'Content-Type' = 'text/xml; charset=utf-8'
-        body = envelope
+    payload = {
+        "searchQuery": item_path.split('/')[-1],  # Nombre del item
+        "searchConditions": [
+            {
+                "fieldName": "Path",
+                "operator": "Equals",
+                "value": item_path
+            }
+        ],
+        "searchFlags": 0
+    }
+    
+    response = requests.post(
+        search_url,
+        json=payload,
+        auth=HttpNtlmAuth(username, password),
+        verify=False  # Solo en entornos con certificados internos; usar True en producción
+    )
+    response.raise_for_status()
+    
+    results = response.json()
+    if not results.get('Items'):
+        raise Exception(f"Item no encontrado: {item_path}")
+    
+    return results['Items'][0]['Id']
+
+def get_security(base_url, username, password, item_id):
+    """
+    Obtiene políticas actuales de un item
+    """
+    url = f"{base_url.rstrip('/')}/api/security/items/{item_id}"
+    
+    response = requests.get(
+        url,
+        auth=HttpNtlmAuth(username, password),
+        verify=False
+    )
+    response.raise_for_status()
+    
+    return response.json()
+
+def set_security(base_url, username, password, item_id, policies):
+    """
+    Actualiza políticas de seguridad
+    """
+    url = f"{base_url.rstrip('/')}/api/security/items/{item_id}"
+    
+    payload = {
+        "Policies": policies,
+        "SecurityDataVersion": 1
+    }
+    
+    response = requests.post(
+        url,
+        json=payload,
+        auth=HttpNtlmAuth(username, password),
+        verify=False
+    )
+    response.raise_for_status()
+    
+    return response.json()
+
+def manage_browser_role(
+    reports_url,
+    username,
+    password,
+    item_path,
+    target_user,
+    assign=True
+):
+    """
+    Asigna o elimina rol Browser para un usuario en SSRS 2019
+    """
+    # Paso 1: Obtener itemId desde ruta
+    print(f"Buscando item: {item_path}")
+    item_id = get_item_id(reports_url, username, password, item_path)
+    print(f"✓ Item ID: {item_id}")
+    
+    # Paso 2: Obtener políticas actuales
+    print("Obteniendo políticas actuales...")
+    security = get_security(reports_url, username, password, item_id)
+    policies = security.get('Policies', [])
+    print(f"Políticas actuales: {len(policies)} usuarios")
+    
+    # Paso 3: Modificar políticas
+    user_found = False
+    for policy in policies:
+        if policy['GroupUserName'].lower() == target_user.lower():
+            user_found = True
+            roles = [r['Name'] for r in policy.get('Roles', [])]
+            
+            if assign:
+                if 'Browser' not in roles:
+                    roles.append('Browser')
+                    print(f"✓ Agregando rol Browser a {target_user}")
+                else:
+                    print(f"ℹ️ {target_user} ya tiene rol Browser")
+            else:
+                if 'Browser' in roles:
+                    roles.remove('Browser')
+                    print(f"✓ Eliminando rol Browser de {target_user}")
+                else:
+                    print(f"ℹ️ {target_user} no tiene rol Browser")
+            
+            # Actualizar roles en política
+            policy['Roles'] = [{'Name': r} for r in roles]
+            break
+    
+    # Si no existe el usuario y se quiere asignar
+    if assign and not user_found:
+        policies.append({
+            "GroupUserName": target_user,
+            "Roles": [{"Name": "Browser"}],
+            "GroupUserNameEditable": False
+        })
+        print(f"✓ Creando nueva asignación para {target_user}")
+    
+    # Eliminar políticas vacías (sin roles)
+    policies = [p for p in policies if p.get('Roles')]
+    
+    # Paso 4: Aplicar cambios
+    print("Aplicando cambios de seguridad...")
+    set_security(reports_url, username, password, item_id, policies)
+    print(f"✅ Operación completada: {'ASIGNADO' if assign else 'ELIMINADO'} rol Browser para {target_user}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Gestionar rol Browser en SSRS 2019 (API REST)')
+    parser.add_argument('--reports-url', required=True, 
+                        help='URL del Web Portal de SSRS (ej: http://ssrs-server/Reports)')
+    parser.add_argument('--username', required=True, help='Usuario Windows (ej: DOMINIO\\usuario)')
+    parser.add_argument('--password', required=True, help='Contraseña')
+    parser.add_argument('--item-path', required=True, 
+                        help='Ruta completa del item (ej: /PaginatedReports/MiReporte)')
+    parser.add_argument('--target-user', required=True, 
+                        help='Usuario a gestionar (ej: DOMINIO\\usuario)')
+    parser.add_argument('--assign', action='store_true', help='Asignar rol (default: eliminar)')
+    
+    args = parser.parse_args()
+    
+    try:
+        # Desactivar warnings de SSL (solo para entornos con certificados internos)
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         
-        response.success = { resp, reader ->
-            return reader.text
-        }
-        response.failure = { resp, reader ->
-            error "SOAP Error ${resp.status}: ${reader?.text ?: 'Sin respuesta'}"
-        }
-    }
-    return response
-}
+        manage_browser_role(
+            reports_url=args.reports_url,
+            username=args.username,
+            password=args.password,
+            item_path=args.item_path,
+            target_user=args.target_user,
+            assign=args.assign
+        )
+        sys.exit(0)
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        sys.exit(1)
 
-// ================= PASO 1: Obtener políticas actuales =================
-def getExistingPolicies() {
-    def body = """<GetPolicies xmlns="http://schemas.microsoft.com/sqlserver/2010/03/20/ReportServer">
-                    <ItemPath>${folderPath}</ItemPath>
-                  </GetPolicies>"""
-    def envelope = createSoapEnvelope('GetPolicies', body)
-    def rawResponse = callSoapService('ReportService2010.asmx', 'GetPolicies', envelope)
-    
-    // Parsear XML respuesta
-    def xml = new XmlSlurper().parseText(rawResponse)
-    xml.declareNamespace(soap: 'http://schemas.xmlsoap.org/soap/envelope/')
-    xml.declareNamespace(rs: 'http://schemas.microsoft.com/sqlserver/2010/03/20/ReportServer')
-    
-    return xml.'**'.findAll { it.name() == 'Policy' }?.collect { policy ->
-        [
-            GroupUserName: policy.GroupUserName.text(),
-            Roles: policy.Roles.Role.Name.collect { it.text() }
-        ]
-    } ?: []
-}
 
-// ================= PASO 2: Modificar políticas =================
-def updatePolicies(existingPolicies) {
-    def policies = existingPolicies.collect { it } // Clonar
-    
-    if (assignRole) {
-        // Asignar rol Browser
-        def existing = policies.find { it.GroupUserName == targetUser }
-        if (existing) {
-            if (!existing.Roles.contains('Browser')) {
-                existing.Roles << 'Browser'
-            }
-        } else {
-            policies << [
-                GroupUserName: targetUser,
-                Roles: ['Browser']
-            ]
-        }
-    } else {
-        // Eliminar rol Browser
-        policies = policies.collect { policy ->
-            if (policy.GroupUserName == targetUser) {
-                policy.Roles = policy.Roles - 'Browser'
-            }
-            return policy
-        }.findAll { !(it.GroupUserName == targetUser && it.Roles.empty) } // Eliminar si sin roles
-    }
-    
-    return policies
-}
 
-// ================= PASO 3: Aplicar políticas =================
-def applyPolicies(policies) {
-    def policyXml = policies.collect { p ->
-        "<Policy>" +
-        "<GroupUserName>${XmlUtil.escapeXml(p.GroupUserName)}</GroupUserName>" +
-        "<Roles>" +
-        p.Roles.collect { "<Role><Name>${XmlUtil.escapeXml(it)}</Name></Role>" }.join('') +
-        "</Roles>" +
-        "</Policy>"
-    }.join('')
-    
-    def body = """<SetPolicies xmlns="http://schemas.microsoft.com/sqlserver/2010/03/20/ReportServer">
-                    <ItemPath>${folderPath}</ItemPath>
-                    <Policies>${policyXml}</Policies>
-                  </SetPolicies>"""
-    def envelope = createSoapEnvelope('SetPolicies', body)
-    callSoapService('ReportService2010.asmx', 'SetPolicies', envelope)
-    return true
-}
 
-// ================= EJECUCIÓN =================
-try {
-    echo "Obteniendo políticas actuales de: ${folderPath}"
-    def currentPolicies = getExistingPolicies()
-    echo "Políticas actuales: ${currentPolicies}"
-    
-    echo "${assignRole ? 'Asignando' : 'Eliminando'} rol Browser para ${targetUser}"
-    def updatedPolicies = updatePolicies(currentPolicies)
-    echo "Nuevas políticas: ${updatedPolicies}"
-    
-    applyPolicies(updatedPolicies)
-    echo "✅ Operación completada exitosamente"
-} catch (Exception e) {
-    error "❌ Falló la operación: ${e.message}"
-}
-```
 
----
 
-## 🛠️ Pipeline Jenkins Ejemplo
 
-```groovy
 pipeline {
-    agent any
+    agent {
+        // Nodo Jenkins CON Python (NO es el servidor SSRS)
+        // Requisito mínimo: Python 3.6+ con requests y requests-ntlm
+        label 'jenkins-agent-with-python'
+    }
+    parameters {
+        choice(name: 'ACTION', choices: ['assign', 'remove'], description: 'Acción')
+        string(name: 'TARGET_USER', defaultValue: 'DOMINIO\\usuario', description: 'Usuario destino')
+        string(name: 'ITEM_PATH', defaultValue: '/PaginatedReports/MiReporte', description: 'Ruta en SSRS')
+    }
     stages {
-        stage('Gestionar Rol Browser en SSRS') {
+        stage('Preparar entorno Python') {
             steps {
-                script {
-                    withCredentials([usernamePassword(
-                        credentialsId: 'ssrs-credentials',
+                // Solo se ejecuta UNA VEZ en el nodo Jenkins (no en SSRS)
+                sh '''
+                    python3 -m venv ssrs-env
+                    source ssrs-env/bin/activate
+                    pip install requests requests-ntlm
+                '''
+            }
+        }
+        
+        stage('Gestionar Rol Browser') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'ssrs-admin-creds',
                         usernameVariable: 'SSRS_USER',
                         passwordVariable: 'SSRS_PASS'
-                    )]) {
-                        // Ejecutar script Groovy aquí (o llamar a un archivo .groovy)
-                        // El script anterior puede guardarse como manage-ssrs-role.groovy
-                        // y ejecutarse con: groovy manage-ssrs-role.groovy
-                    }
+                    )
+                ]) {
+                    sh '''
+                        source ssrs-env/bin/activate
+                        python manage_ssrs_role.py \
+                            --reports-url "http://ssrs-server/Reports" \
+                            --username "${SSRS_USER}" \
+                            --password "${SSRS_PASS}" \
+                            --item-path "${ITEM_PATH}" \
+                            --target-user "${TARGET_USER}" \
+                            ${ACTION == "assign" ? "--assign" : ""}
+                    '''
                 }
             }
         }
     }
 }
-```
-
----
-
-## ⚠️ Consideraciones importantes
-
-1. **Seguridad**:
-   - Nunca hardcodees credenciales. Usa **Jenkins Credentials**.
-   - Si usas autenticación Windows, configura el plugin **Active Directory** o usa Kerberos en el nodo Jenkins.
-
-2. **Rutas en SSRS**:
-   - Las rutas son case-sensitive y deben empezar con `/` (ej: `/Sales/Reports`).
-   - Para reports específicos: `/Carpeta/ReporteNombre`.
-
-3. **Roles disponibles**:
-   - `Browser`: Solo lectura/ejecución.
-   - `Content Manager`: Administración completa.
-   - `Publisher`, `Report Builder`, etc.
-
-4. **Alternativa con PowerShell**:
-   Si prefieres, puedes ejecutar desde Groovy un script PowerShell usando el módulo `ReportingServicesTools`:
-   ```groovy
-   bat 'powershell -File manage-ssrs.ps1 -User "DOMINIO\\usuario" -FolderPath "/Carpeta" -AssignRole $true'
-   ```
-
-5. **Firewall/Proxy**:
-   Asegúrate de que el nodo Jenkins tenga acceso al puerto 80/443 del servidor SSRS.
-
----
-
-## 🔍 Verificación manual post-ejecución
-
-1. Accede a: `http://tu-servidor-ssrs/Reports`
-2. Navega a la carpeta/report
-3. Haz clic en **⋯ → Manage → Security**
-4. Confirma que el usuario aparezca con el rol **Browser** (o sin él si eliminaste).
-
-Con este enfoque tendrás un proceso 100% automatizado, auditable y reproducible para gestión de permisos en SSRS mediante Jenkins.
