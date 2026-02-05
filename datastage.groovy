@@ -199,3 +199,49 @@ String executeDsjobCommand(String command) {
 
 // Make methods available when loaded via load()
 return this
+
+
+
+
+
+
+pipeline {
+    agent { label 'datastage-agent' }
+    
+    environment {
+        // Bind authfile as secret file credential (ID: datastage-authfile)
+        AUTHFILE = credentials('datastage-authfile')
+        DSHOME = '/opt/IBM/InformationServer/Server/DSEngine'
+        PATH = "${DSHOME}/bin:${env.PATH}"
+    }
+    
+    stages {
+        stage('Check Specific Jobs') {
+            steps {
+                script {
+                    // Load the utility
+                    def ds = load('datastage.groovy')
+                    
+                    // Define your curated job list
+                    def jobs = ['JS_EXT_LOAD', 'JS_FILE_IN']
+                    def project = 'Cartolas'
+                    
+                    // Check status of specific jobs
+                    def statuses = ds.checkJobsStatus(project, jobs)
+                    
+                    echo "Job statuses: ${statuses}"
+                    
+                    // Reset jobs that are NOT running (status != '0')
+                    def resetResults = ds.resetJobsOnNonRunning(project, jobs, false) // false = live mode
+                    
+                    // Optional: Fail build if any job is in failed/crashed state
+                    statuses.each { job, status ->
+                        if (status in ['3', '96']) {
+                            error("Job ${job} is in critical state: ${ds.getStatusText(status)}")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
