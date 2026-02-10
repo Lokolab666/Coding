@@ -152,3 +152,8 @@ pims-automation/
 | Generación de archivos separada | **Paso 5 unificado** | Menos I/O innecesario, mejor rendimiento |
 
 ¿Necesitas que te genere el **Jenkinsfile con 7 stages** (uno por paso) o el **script Python consolidado** listo para ejecutar la PoC?
+
+
+
+  Met with the customer (Binu) today and stayed after the meeting to review the reported issue. We confirmed the correct database host configuration for the application and validated database connectivity from the application pod. The connection test using pgcli was successful with the following command:
+export HOME=/tmp && pgcli postgresql://app_update@ami-mde-db-mde-prd-cluster-rw.ami-mde-db.svc.cluster.local:5432/app
