@@ -54,5 +54,24 @@ Los días 15 y 30, a las 08:00
 PROJECT=...;JOB=...
 
 
+
+    
+
+    # EVERY DAY at 02:05 AM Santiago time → Check SEQ_PROCESA
+5 2 * * * % PROJECT=beneficios;JOB=SEQ_PROCESA
+
+# EVERY DAY at 21:05 PM Santiago time → Check SEQ_HDV
+5 21 * * * % PROJECT=beneficios;JOB=SEQ_HDV
+
+# 9th,10th,11th of month at 05:05 AM → Check CURRENCY_DSS
+5 5 9,10,11 * * % PROJECT=BNPP;JOB=CURRENCY_DSS
+
+# Tues/Thurs at 19:05 PM → Check specific job
+5 19 * * 2,4 % PROJECT=...;JOB=...
+
+
+
+    
+
     # Check 3 minutes after each interval
 3,13,23,33,43,53 * * * * % PROJECT=...;JOB=...
