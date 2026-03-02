@@ -404,4 +404,155 @@ Si encuentras errores durante la ejecución:
 
 ---
 
-¿Quieres que prepare también los **scripts en archivos descargables** o necesitas ayuda con algún paso específico de la implementación? 🚀
+# 🐍 ¿Dónde hacer `pip install jinja2` en GitLab CI/CD?
+
+En GitLab CI/CD **no se instala manualmente** en un servidor. Hay **3 opciones** para tener Jinja2 disponible en tu pipeline:
+
+---
+
+## ✅ Opción 1: `before_script` en `.gitlab-ci.yml` (Recomendada para PoC)
+
+Agrega la instalación directa en tu archivo de pipeline. Es la opción más rápida para validar el PoC.
+
+```yaml
+# .gitlab-ci.yml
+stages:
+  - parse
+  - generate
+  - propose
+
+variables:
+  OUTPUT_PATH: "policies/cluster/customer-components/cluster-scoped/"
+  FILE_NAME: "antrea_clusternetworkpolicy_egress-livelink-mecc.yaml"
+
+# Instalación global para todos los jobs
+before_script:
+  - echo "📦 Installing Python dependencies..."
+  - pip3 install jinja2
+
+# ========== STAGE 1: PARSE INPUT ==========
+parse_job:
+  stage: parse
+  script:
+    - echo "📥 Parsing ticket data..."
+    - python3 scripts/parse_input.py
+  artifacts:
+    reports:
+      dotenv: parse_output.env
+
+# ========== STAGE 2: GENERATE POLICY ==========
+generate_job:
+  stage: generate
+  script:
+    - echo "📝 Generating Antrea ClusterNetworkPolicy..."
+    - mkdir -p $OUTPUT_PATH
+    - python3 scripts/generate_rule.py
+    - cat $OUTPUT_PATH$FILE_NAME
+  artifacts:
+    paths:
+      - $OUTPUT_PATH
+
+# ========== STAGE 3: CREATE MERGE REQUEST ==========
+propose_job:
+  stage: propose
+  script:
+    - git config user.name "Network Automation Bot"
+    - git config user.email "automation-bot@medtronic.com"
+    - |
+      TICKET_ID=$(echo $MOCK_TICKET_DATA | python3 -c "import sys,json; print(json.load(sys.stdin).get('ticket_number','UNKNOWN'))")
+      BRANCH_NAME="feature/egress-rule-$TICKET_ID"
+    - git checkout -b $BRANCH_NAME
+    - git add $OUTPUT_PATH
+    - git commit -m "Auto-generate egress rule for $TICKET_ID"
+    - git push -u origin $BRANCH_NAME
+    - |
+      curl --request POST \
+        --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+        --header "Content-Type: application/json" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests" \
+        --data "{\"source_branch\":\"$BRANCH_NAME\",\"target_branch\":\"main\",\"title\":\"[PoC] Egress Rule: $TICKET_ID\"}"
+    - echo "✅ Merge Request created!"
+  only:
+    - main
+```
+
+### ✅ Ventajas
+- Simple y rápido
+- No requiere crear archivos adicionales
+- Ideal para PoC
+
+### ⚠️ Desventajas
+- Instala en cada ejecución del pipeline (agrega ~5-10 segundos)
+- No es persistente entre jobs (por eso va en `before_script` global)
+
+---
+
+## ✅ Opción 2: Archivo `requirements.txt` + `pip install -r` (Best Practice)
+
+Si quieres seguir mejores prácticas desde el inicio, crea un archivo de dependencias.
+
+**Paso 1:** Crea el archivo `requirements.txt` en la raíz del repositorio:
+```txt
+jinja2==3.1.2
+```
+
+**Paso 2:** Actualiza tu `.gitlab-ci.yml`:
+```yaml
+before_script:
+  - echo "📦 Installing Python dependencies..."
+  - pip3 install -r requirements.txt
+```
+
+### ✅ Ventajas
+- Más profesional y escalable
+- Fácil agregar más librerías después (ej. `requests`, `pyyaml`)
+- Versionado de dependencias
+
+---
+
+## ✅ Opción 3: Usar Imagen Docker con Python + Jinja2 Pre-instalado (Producción)
+
+Para entornos de producción, usa una imagen personalizada que ya tenga las dependencias.
+
+```yaml
+# .gitlab-ci.yml
+image: python:3.11-slim
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip-cache"
+
+cache:
+  paths:
+    - .pip-cache/
+
+before_script:
+  - pip install --cache-dir $PIP_CACHE_DIR jinja2
+
+stages:
+  - parse
+  - generate
+  - propose
+```
+
+### ✅ Ventajas
+- Más rápido (usa cache entre pipelines)
+- Entorno consistente y reproducible
+- Recomendado para producción
+
+---
+
+## 📊 Comparación de Opciones
+
+| Opción | Tiempo Setup | Velocidad Pipeline | Recomendado para |
+|--------|--------------|--------------------|------------------|
+| **Opción 1** (`pip install` directo) | ⚡ 1 min | 🐢 Normal | **PoC / Pruebas** |
+| **Opción 2** (`requirements.txt`) | ⚡ 2 min | 🐢 Normal | **Proyecto en crecimiento** |
+| **Opción 3** (Docker + Cache) | ⏱️ 10 min | 🚀 Rápido | **Producción** |
+
+---
+
+## 🚀 Recomendación para tu PoC
+
+Usa la **Opción 1** ahora para validar rápido. Cuando el PoC sea exitoso y pases a producción, migra a la **Opción 3**.
+
+**¿Quieres que actualice el `.gitlab-ci.yml` completo del PoC con esta configuración?** 📝
