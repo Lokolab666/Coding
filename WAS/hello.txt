@@ -1,0 +1,31 @@
+Please allow Egress rule for Mecc V2 Prod cluster, please find the rule attached in sheet
+
+
+cluster/customer-components/cluster-scoped/antrea_clusternetworkpolicy_egress-livelink-mecc.yaml
+apiVersion: crd.antrea.io/v1beta1
+kind: ClusterNetworkPolicy
+metadata:
+  name: egress-livelink-mecc
+spec:
+  egress:
+  - action: Allow
+    appliedTo:
+    - namespaceSelector:
+        matchExpressions:
+          - key: "kubernetes.io/metadata.name"
+            operator: "In"
+            values: ["livelink-ignition"]
+    enableLogging: true
+    name: STG MECC V2 NFS write access
+    to:
+      - fqdn: meccstoragegw-prod.medtronic.com
+      - fqdn: abrc1-avis3gw-test.corp.medtronic.com
+    ports:
+      - protocol: TCP
+        port: 2049
+      - protocol: TCP
+        port: 20048
+      - protocol: TCP
+        port: 32803
+  priority: 80
+  tier: atlas-tenants
