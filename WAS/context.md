@@ -152,7 +152,22 @@ Plain Text
 CA not found
 So the handshake succeeds, but Java can’t validate the certificate chain, which explains the errors
 
-I ran a few validation commands directly inside the TomcatHTTPD base image and confirmed the image already includes the major public CA root certificates used by AWS RDS, including:
+Ash (my leader tell me)
+Java certs get injected into the containers at startup - you'll see a cacerts file under each app's /files directory in flux. For example: https://code.medtronic.com/bcp_web/devops/fluxconfigs/argononprod/-/tree/main/argo-protolens-testing/files?ref_type=heads
+ 
+I just picked an app at random there, but same should apply for all the others, so look at whichever app this is for. 
+ 
+So a team:
+Runs manage-namespace, which pulls the cacerts file from artifactory (https://code.medtronic.com/bcp_web/devops/prometheus/manage-namespace/-/blob/main/scripts/generateNamespaceFluxYaml.groovy?ref_type=heads#L1597)
+It downloads that cacerts file into the flux repo /files folder under that app
+Then during deploy-image, it base64 encodes the cacerts file into this secrets yaml file so that it gets loaded into the container at the proper java certs location: https://code.medtronic.com/bcp_web/devops/fluxconfigs/argononprod/-/blob/main/argo-protolens-testing/secrets-files.yaml?ref_type=heads
+ 
+So a few things I would suggest:
+Download and check that cacerts file for the CA that is supposedly missing, it should be there (unless the CA has changed). If the CA has changed, you download the cacerts file, add the missing CA cert to it, then upload it back into artifactory so that namespace picks it up on the next run 
+Check the cacerts file / secrets-files.yaml's cacerts value and confirm it matches other apps (especially if this is the only app having a problem).
+Check if for some reason maybe in latest version of java the cacerts location would have changed? Like is the latest version looking for the cacerts file at a different location than where it is being loaded to? Here's where it loads it to (it is defined in the helm chart): https://code.medtronic.com/bcp_web/devops/helmcharts/argohelmcharts/-/blob/main/charts/argo-app/1.0.9/templates/deployment.yaml?ref_type=heads#L255 - so it places it at /opt/java/openjdk/lib/security/cacerts
+
+And with this, I ran a few validation commands directly inside the TomcatHTTPD base image and confirmed the image already includes the major public CA root certificates used by AWS RDS, including:
  
 DigiCert roots
 GlobalSign roots
