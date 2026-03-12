@@ -283,3 +283,162 @@ The evidence no longer supports a single-cause explanation. The original `handsh
 Your strongest next move is not another generic cert patch. It is proving, inside the pod, exactly which truststore Java 17 is loading and whether it can build an `X509TrustManager` from it.
 
 If you want, I can turn this into a clean incident update for your team channel or ServiceNow ticket.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+That is expected. Your earlier command path assumed there was a container named `argo-app`, but your pod spec does not prove that, and with `CrashLoopBackOff` you also have a timing problem.
+
+There are two separate issues you need to stop mixing:
+
+First, `container not found` usually means the container name is wrong.
+Second, `CrashLoopBackOff` means the container may exist but is not staying up long enough for `exec`.
+
+So do this in order.
+
+First, get the real container names from the pod, not from assumptions:
+
+```bash
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev get pod <POD_NAME> -o jsonpath='{.spec.containers[*].name}{"\n"}'
+```
+
+Also check init containers:
+
+```bash
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev get pod <POD_NAME> -o jsonpath='{.spec.initContainers[*].name}{"\n"}'
+```
+
+And get a broader view:
+
+```bash
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev describe pod <POD_NAME>
+```
+
+That will tell you the exact container name and whether the pod is restarting before you can enter it.
+
+If the container name is different, then exec with the real one:
+
+```bash
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev exec -it <POD_NAME> -c <REAL_CONTAINER_NAME> -- sh
+```
+
+If the pod is crashing too fast, `exec` is the wrong tool. Use one of these instead.
+
+Get previous logs from the crashed container:
+
+```bash
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev logs <POD_NAME> -c <REAL_CONTAINER_NAME> --previous --tail=300
+```
+
+Check if the container ever started and what state it is in:
+
+```bash
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev get pod <POD_NAME> -o jsonpath='{range .status.containerStatuses[*]}Name: {.name}{"\n"}State: {.state}{"\n"}Last State: {.lastState}{"\n"}Restart Count: {.restartCount}{"\n\n"}{end}'
+```
+
+Now, the more important point: if you already changed the Helm values to:
+
+```yaml
+command: ["sh", "-c"]
+args: ["sleep 36000"]
+healthCheckEnabled: false
+```
+
+but the new pods still crash, then one of these is true:
+
+1. Flux/Helm did not actually apply your change.
+2. You edited the wrong app/release/branch.
+3. Another chart value or entrypoint is overriding your command.
+4. The pod is failing before the main container starts.
+5. The crashing pod you are targeting is still the old ReplicaSet.
+
+That is why you need to verify the live pod spec, not trust the YAML you pasted.
+
+Run this:
+
+```bash
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev get deploy worldwiderevenue-dev -o yaml
+```
+
+Look specifically for the live rendered section under:
+
+* `spec.template.spec.containers[].name`
+* `spec.template.spec.containers[].command`
+* `spec.template.spec.containers[].args`
+
+You can extract only that with:
+
+```bash
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev get deploy worldwiderevenue-dev -o jsonpath='{range .spec.template.spec.containers[*]}NAME={.name}{"\n"}COMMAND={.command}{"\n"}ARGS={.args}{"\n\n"}{end}'
+```
+
+If you do not see `sleep 36000` there, then your debug override is not live, so trying to `exec` is a waste of time.
+
+Also identify whether you are looking at old or new ReplicaSets:
+
+```bash
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev get rs -o wide
+```
+
+Then inspect pod ownership:
+
+```bash
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev get pod <POD_NAME> -o jsonpath='{.metadata.ownerReferences[0].name}{"\n"}'
+```
+
+If the crashing pod belongs to an old ReplicaSet, stop using it for debugging.
+
+If the deployment really has `sleep 36000` but the pod still does not stay up, then inspect events:
+
+```bash
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev get events --sort-by=.lastTimestamp | tail -n 50
+```
+
+And check whether the failure is from volume mounts, secret projection, image pull, or security context before the process even runs.
+
+There is one more option if your cluster allows it: debug container injection into the pod namespace. But this only helps if the pod reaches Running. With hard crash/error at startup, it often does not solve the root issue.
+
+Try this only if the pod stays around long enough:
+
+```bash
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev debug -it <POD_NAME> --image=busybox --target=<REAL_CONTAINER_NAME> -- sh
+```
+
+What I think you should run next, in exact order:
+
+```bash
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev get pods -o wide
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev get pod <POD_NAME> -o jsonpath='{.spec.containers[*].name}{"\n"}'
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev get pod <POD_NAME> -o jsonpath='{range .status.containerStatuses[*]}Name: {.name}{"\n"}State: {.state}{"\n"}Last State: {.lastState}{"\n"}Restart Count: {.restartCount}{"\n\n"}{end}'
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev logs <POD_NAME> -c <REAL_CONTAINER_NAME> --previous --tail=300
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev get deploy worldwiderevenue-dev -o jsonpath='{range .spec.template.spec.containers[*]}NAME={.name}{"\n"}COMMAND={.command}{"\n"}ARGS={.args}{"\n\n"}{end}'
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev get rs -o wide
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev get pod <POD_NAME> -o jsonpath='{.metadata.ownerReferences[0].name}{"\n"}'
+./kubectl --kubeconfig ~/.kube/argo-dev.yaml -n argo-worldwiderevenue-dev get events --sort-by=.lastTimestamp | tail -n 50
+```
+
+The mistake here was assuming `argo-app` was the container name and assuming the debug `sleep` change was already live. Both assumptions need to be verified, not trusted.
+
+Paste me the output of these four specifically:
+`containers[*].name`,
+`containerStatuses`,
+deployment `COMMAND/ARGS`,
+and `ownerReferences[0].name]`
+
+With that, I can tell you whether the problem is wrong container name, stale ReplicaSet, or failed debug override.
