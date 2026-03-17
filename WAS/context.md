@@ -1,63 +1,37 @@
-I've a new ticket about Attn: Infra-Argo-Global Upgraded a configuration from CIAM to AUTH0, got an error on namespace job with provider error
+Supported Authentication Providers
+There are multiple ways to include authentication with your application.
 
-Errors:
-Processing auth details for: [clientId:M5QWPMlC4Ssyk66ac4FvTfy5rcOspcTP, provider:signin-stage.medtronic.com, temporaryJenkinsSecretsIndex:2]
-Downloading cacerts.mdt from Artifactory
-Exception in generateSecretsPr
+All tomcat_httpd flavor applications that were built using the legacy Jenkins pipeline will have a default page provided when deployed located under /<ContextRoot>/snoop.jsp that will provide details of all the available headers and user information available to the application once a user is logged in.
+Using the OIDConALB setting to allow the load balancer to handle authentication and require less coding and configuration within the application itself.
+#OpenID Connect
+The below table outlines the current set of supported OIDC providers for the pipeline. The Provider String is what is needed to define which provider you wish to use within the environmentInfo.json for the application.
 
-log: https://code.medtronic.com/bcp_web/devops/prometheus/manage-namespace/-/jobs/21260512
-The log is:
-Preparing to clone dedicated ALB target repository from https://medtronic.gitlab-dedicated.com/bcp_web/devops/fluxconfigs/flux-gitops.git
-Cloning into 'flux_clone_alb'...
-✅ Successfully cloned primary + secondary mirror repositories
-✅ Successfully cloned dedicated ALB target repository
-$ echo "running namespace script..." # collapsed multi-line command
-running namespace script...
-Switched to a new branch 'oracleclinicalrdcsso/dev/env3714193'
-HAS_SECRETS? true
-Seeded generator tracker from destination: ../flux_clone_alb/clusters/TF-argo-dev/infrastructure/ingress/alb-tracker.json
-Using ALB_BASE_DIR for generator: clusters/TF-argo-dev/infrastructure/ingress
-groovy ../scripts/generateNamespaceFluxYaml.groovy DEV false argo-dev.eks.mdtcloud.io false true  Yk95Wm9sRG4uTDctSTg0OXZ5ZE5mci1uaH5adG0tOUVjUA== akxHNzJpcEJNTUhya09CN0FzTXVoYkstZV9aMDNZdm55TVVOVl9PZmV4LUlHWU4zS1ZxamhwM0VNdjZRTXY4Qg== dHJhY3Rpb24xMTk4NGNvbnRyb2w=
-REMOVE? env prop: null, sys prop: null
-env: DEV
-useExistingSecrets: false
------SECRET COUNT: 3----------
-file path is: /builds/bcp_web/devops/prometheus/manage-namespace
-Found match for DEV - using this
------- NAMESPACE REMOVE?: false, UNINSTALL?: false ------------
-Evaluating PROJECT_ID and PROJECT_REPO_URL
-Namespace directory for argo-oracleclinicalrdcsso-dev exists
-Processing: RDCSSO with details [userName:RDC_SSO, URL:jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCPS)(HOST=mspldb666.corp.medtronic.com)(PORT=2484))(CONNECT_DATA=(SERVICE_NAME=rdcssod.corp.medtronic.com))), temporaryJenkinsSecretsIndex:3]
-Processing auth details for: [clientId:58991d60-f3b5-4312-b9bd-b7a832baa2e2, provider:login.microsoftonline.com%2F0a29d274-1367-4a8f-99c5-90c3dc7d4043%2Fv2.0, temporaryJenkinsSecretsIndex:1]
-Processing auth details for: [clientId:M5QWPMlC4Ssyk66ac4FvTfy5rcOspcTP, provider:signin-stage.medtronic.com, temporaryJenkinsSecretsIndex:2]
-Downloading cacerts.mdt from Artifactory
-Exception in generateSecretsProvider: java.lang.Exception: File signin-stage.medtronic.com.provider does not exist within the 'oidc-providers-1.4.tar.gz' file. Please confirm you are using one of the valid provider strings as defined in the Playbook: https://playbook.argo-dev.eks.mdtcloud.io/authentication-and-authorization/supported-authentication-providers/.
-Temp directory deleted
-Re-throwing exception after deleting directory
-Caught: java.lang.Exception: File signin-stage.medtronic.com.provider does not exist within the 'oidc-providers-1.4.tar.gz' file. Please confirm you are using one of the valid provider strings as defined in the Playbook: https://playbook.argo-dev.eks.mdtcloud.io/authentication-and-authorization/supported-authentication-providers/.
-java.lang.Exception: File signin-stage.medtronic.com.provider does not exist within the 'oidc-providers-1.4.tar.gz' file. Please confirm you are using one of the valid provider strings as defined in the Playbook: https://playbook.argo-dev.eks.mdtcloud.io/authentication-and-authorization/supported-authentication-providers/.
-	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
-	at java.base/jdk.internal.reflect.NativeConstructorAccessorImpl.newInstance(Unknown Source)
-	at java.base/jdk.internal.reflect.DelegatingConstructorAccessorImpl.newInstance(Unknown Source)
-	at scripts.generateNamespaceFluxYaml$_generateSecretsProvider_closure32.doCall(generateNamespaceFluxYaml.groovy:1838)
-	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
-	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(Unknown Source)
-	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source)
-	at scripts.generateNamespaceFluxYaml.generateSecretsProvider(generateNamespaceFluxYaml.groovy:1813)
-	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
-	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(Unknown Source)
-	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source)
-	at scripts.generateNamespaceFluxYaml.run(generateNamespaceFluxYaml.groovy:819)
-	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
-	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(Unknown Source)
-	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source)
-Uploading artifacts for failed job
-00:01
-Uploading artifacts...
-WARNING: certArn.env: no matching files. Ensure that the artifact path is relative to the working directory (/builds/bcp_web/devops/prometheus/manage-namespace) 
-ERROR: No files to upload                          
-Cleaning up project directory and file based variables
-00:01
-ERROR: Job failed: command terminated with exit code 1
+Provider String the string that will be used as the value for the "provider" key in the environmentInfo.json file. This can be different for each defined environment block and provider block within that file.
 
-How can solve it?
+Default Scope defines the scope that is included by default when using the provider. Depending on application needs, this may need to be overridden in the appInfo.json by defining the scope parameter for the provider.
+
+Name	Provider String	Description	Client ID(s)	Default Scope
+Medtronic Internal - Non-prod	login.microsoftonline.com%2F0a29d274-1367-4a8f-99c5-90c3dc7d4043%2Fv2.0	Non-prod internal provider (Entra ID / Azure AD) for Medtronic employee authentication. Provides mdtdirectorykeyi of the user as a header once user is logged in.	MDT_WEBAPP_BASIC/MDT_WEBAPP_DIRKEY: eff21357-eb1b-45ae-9d68-5a00c11c9086
+
+MDT_WEBAPP_DIRKEYOUTLOOK: 0db2f0ec-8524-46ea-ae2b-6035f76e2072
+
+MDT_WEBAPP_GROUP: 58991d60-f3b5-4312-b9bd-b7a832baa2e2	openid email profile phone
+Medtronic Internal - Production	login.microsoftonline.com%2Fd73a39db-6eda-495d-8000-7579f56d68b7%2Fv2.0	Production internal provider (Entra ID / Azure AD) for Medtronic employee authentication. Provides mdtdirectorykeyi of the user as a header once user is logged in.	MDT_WEBAPP_BASIC/MDT_WEBAPP_DIRKEY: de1122aa-25bf-4644-8cf0-9250f07e01f8
+
+MDT_WEBAPP_DIRKEYOUTLOOK: a8cf1742-8949-46ca-9ae7-92126ce46111
+
+MDT_WEBAPP_GROUP: 861e5b53-393d-46bc-b804-d4a1a1e14185	openid email profile phone
+CIAM/External - Non-prod (Dev)	dev.login.medtronic.com%2Foauth2%2Fausqxu4lutnO83mOb1d6	Non-prod (Dev) external provider (Okta) for Medtronic external user authentication. Provides legacy mdtdirectorykeyext and new mdtuuidext user identifiers as headers once user is logged in.	custom for each application	openid profile
+CIAM/External - Non-prod (Test)	test.login.medtronic.com%2Foauth2%2Faus1n3gftlEI6n8B70x7	Non-prod (Test) external provider (Okta) for Medtronic external user authentication. Provides legacy mdtdirectorykeyext and new mdtuuidext user identifiers as headers once user is logged in.	custom for each application	openid profile
+CIAM/External - Non-prod (Stage)	stage.login.medtronic.com%2Foauth2%2Faus12k2r9jvwY2zRl417	Non-prod (Stage) external provider (Okta) for Medtronic external user authentication. Provides legacy mdtdirectorykeyext and new mdtuuidext user identifiers as headers once user is logged in.	custom for each application	openid profile
+CIAM/External - Production	login.medtronic.com%2Foauth2%2Faus16gc5wjVvJqXUg417	Production external provider (Okta) for Medtronic external user authentication. Provides legacy mdtdirectorykeyext and new mdtuuidext user identifiers as headers once user is logged in.	custom for each application	openid profile
+#OpenID Endpoints by Provider
+If using the OIDConALB setting, the below .well-known config URLs can be accessed to retrieve all of the endpoints needed for your environmentInfo.json file.
+
+Name	Well Known Config URL
+Medtronic Internal - Non-prod	https://login.microsoftonline.com/0a29d274-1367-4a8f-99c5-90c3dc7d4043/v2.0/.well-known/openid-configuration
+Medtronic Internal - Production	https://login.microsoftonline.com/d73a39db-6eda-495d-8000-7579f56d68b7/v2.0/.well-known/openid-configuration
+CIAM/External - Non-prod (Dev)	https://dev.login.medtronic.com/oauth2/ausqxu4lutnO83mOb1d6/.well-known/openid-configuration
+CIAM/External - Non-prod (Test)	https://test.login.medtronic.com/oauth2/aus1n3gftlEI6n8B70x7/.well-known/openid-configuration
+CIAM/External - Non-prod (Stage)	https://stage.login.medtronic.com/oauth2/aus12k2r9jvwY2zRl417/.well-known/openid-configuration
+CIAM/External - Production	https://login.medtronic.com/oauth2/aus16gc5wjVvJqXUg417/.well-known/openid-configuration
