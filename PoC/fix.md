@@ -1,58 +1,177 @@
-The error is expected. Your current script still does this:
+#!/usr/bin/env python3
+import json
+import os
+from pathlib import Path
 
-def load_existing_yaml(path):
-    file_path = Path(path)
-    if not file_path.exists():
-        return None
-
-    with file_path.open("r") as f:
-        return yaml.load(f)
-
-So it tries to parse invalid YAML directly and dies. There is no repair step in the version you pasted.
-
-And the file is clearly malformed. Not just one line. These are all wrong inside spec.egress:
-
-appliedTo: is misindented
-
-matchExpressions: is misindented
-
-operator: and values: are misindented
-
-each port: line is misindented
-
-
-Your repo file is this broken shape:
-
-egress:
-    - action: Allow
-    appliedTo:
-      - namespaceSelector:
-        matchExpressions:
-          - key: "kubernetes.io/metadata.name"
-          operator: "In"
-          values: ["livelink-ignition"]
-    enableLogging: true
-    ...
-    ports:
-      - protocol: TCP
-      port: 2049
-
-That is not valid YAML.
-
-Use this fix. Replace your current load_existing_yaml() with a version that repairs this known malformed Antrea policy structure before parsing.
-
-Also add these two imports:
-
+from ruamel.yaml import YAML
+from ruamel.yaml.comments import CommentedMap, CommentedSeq
+from ruamel.yaml.scalarstring import DoubleQuotedScalarString as DQS
+from ruamel.yaml.scalarstring import PlainScalarString as PSS
 from ruamel.yaml.parser import ParserError
 from ruamel.yaml.scanner import ScannerError
 
-Then add this function and replace load_existing_yaml().
+yaml = YAML()
+yaml.preserve_quotes = True
+yaml.default_flow_style = False
+yaml.indent(mapping=2, sequence=4, offset=2)
 
-def repair_known_policy_yaml(raw_text: str) -> str:
+
+def load_ticket_data():
+    raw = os.environ.get("MOCK_TICKET_DATA")
+    if not raw:
+        raise ValueError("MOCK_TICKET_DATA is not set")
+    return json.loads(raw)
+
+
+def parse_ports(port_string):
+    if not port_string:
+        return []
+
+    cleaned = str(port_string).replace(" ", ",").replace(";", ",")
+    result = set()
+
+    for token in cleaned.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        try:
+            port = int(token)
+            if 1 <= port <= 65535:
+                result.add(port)
+        except ValueError:
+            pass
+
+    return sorted(result)
+
+
+def build_namespace_selector(namespace):
+    values = CommentedSeq([DQS(namespace)])
+    values.fa.set_flow_style()
+
+    match_expression = CommentedMap()
+    match_expression["key"] = DQS("kubernetes.io/metadata.name")
+    match_expression["operator"] = DQS("In")
+    match_expression["values"] = values
+
+    namespace_selector = CommentedMap()
+    namespace_selector["matchExpressions"] = CommentedSeq([match_expression])
+
+    applied_to_item = CommentedMap()
+    applied_to_item["namespaceSelector"] = namespace_selector
+
+    applied_to = CommentedSeq([applied_to_item])
+    return applied_to
+
+
+def build_destinations(rule_data):
+    to_seq = CommentedSeq()
+
+    fqdn = (rule_data.get("destination_fqdn") or "").strip()
+    ip = (rule_data.get("destination_ip") or "").strip()
+
+    if fqdn:
+        item = CommentedMap()
+        item["fqdn"] = fqdn
+        to_seq.append(item)
+    elif ip:
+        item = CommentedMap()
+        item["ipBlock"] = CommentedMap()
+        item["ipBlock"]["cidr"] = f"{ip}/32"
+        to_seq.append(item)
+    else:
+        raise ValueError("Each rule must include destination_fqdn or destination_ip")
+
+    return to_seq
+
+
+def build_ports(rule_data):
+    ports = parse_ports(rule_data.get("ports", ""))
+    if not ports:
+        raise ValueError("Each rule must include at least one valid port")
+
+    port_seq = CommentedSeq()
+    for port in ports:
+        item = CommentedMap()
+        item["protocol"] = "TCP"
+        item["port"] = port
+        port_seq.append(item)
+
+    return port_seq
+
+
+def build_egress_rule(rule_data):
+    source_namespace = (rule_data.get("source_namespace") or "").strip()
+    if not source_namespace:
+        raise ValueError("Each rule must include source_namespace")
+
+    rule_name = (
+        (rule_data.get("name") or "").strip()
+        or (rule_data.get("rule_name") or "").strip()
+        or (rule_data.get("purpose") or "").strip()
+        or "egress-rule"
+    )
+
+    rule = CommentedMap()
+    rule["action"] = "Allow"
+    rule["appliedTo"] = build_namespace_selector(source_namespace)
+    rule["enableLogging"] = True
+    rule["name"] = PSS(rule_name)
+    rule["to"] = build_destinations(rule_data)
+    rule["ports"] = build_ports(rule_data)
+
+    return rule
+
+
+def ensure_base_document(doc, ticket, cluster):
+    if doc is None:
+        doc = CommentedMap()
+        doc["apiVersion"] = "crd.antrea.io/v1beta1"
+        doc["kind"] = "ClusterNetworkPolicy"
+
+        metadata = CommentedMap()
+        metadata["name"] = "egress-livelink-mecc"
+
+        labels = CommentedMap()
+        labels["ticket"] = DQS(ticket)
+        labels["cluster"] = DQS(cluster)
+
+        metadata["labels"] = labels
+        doc["metadata"] = metadata
+
+        spec = CommentedMap()
+        spec["egress"] = CommentedSeq()
+        spec["priority"] = 80
+        spec["tier"] = "atlas-tenants"
+        doc["spec"] = spec
+        return doc
+
+    if "metadata" not in doc:
+        doc["metadata"] = CommentedMap()
+
+    if "labels" not in doc["metadata"]:
+        doc["metadata"]["labels"] = CommentedMap()
+
+    doc["metadata"]["labels"]["ticket"] = DQS(ticket)
+    doc["metadata"]["labels"]["cluster"] = DQS(cluster)
+
+    if "spec" not in doc:
+        doc["spec"] = CommentedMap()
+
+    if "egress" not in doc["spec"]:
+        doc["spec"]["egress"] = CommentedSeq()
+
+    if "priority" not in doc["spec"]:
+        doc["spec"]["priority"] = 80
+
+    if "tier" not in doc["spec"]:
+        doc["spec"]["tier"] = "atlas-tenants"
+
+    return doc
+
+
+def repair_known_policy_yaml(raw_text):
     fixed = []
     in_egress = False
-    in_ports = False
-    in_to = False
 
     for line in raw_text.splitlines():
         stripped = line.strip()
@@ -61,109 +180,111 @@ def repair_known_policy_yaml(raw_text: str) -> str:
             fixed.append("")
             continue
 
-        # top-level / already good sections
         if stripped == "---":
             fixed.append("---")
             continue
 
-        if stripped.startswith(("apiVersion:", "kind:", "metadata:", "spec:")):
+        if stripped.startswith("apiVersion:"):
             fixed.append(stripped)
             continue
 
-        if stripped.startswith(("name:", "labels:")) and not in_egress:
-            fixed.append(f"  {stripped}")
+        if stripped.startswith("kind:"):
+            fixed.append(stripped)
             continue
 
-        if stripped.startswith(("ticket:", "cluster:")) and not in_egress:
-            fixed.append(f"    {stripped}")
+        if stripped == "metadata:":
+            in_egress = False
+            fixed.append("metadata:")
+            continue
+
+        if stripped == "spec:":
+            in_egress = False
+            fixed.append("spec:")
             continue
 
         if stripped == "egress:":
             in_egress = True
-            in_ports = False
-            in_to = False
             fixed.append("  egress:")
+            continue
+
+        if not in_egress:
+            if stripped.startswith(("name:", "labels:")):
+                fixed.append(f"  {stripped}")
+                continue
+            if stripped.startswith(("ticket:", "cluster:")):
+                fixed.append(f"    {stripped}")
+                continue
+            if stripped.startswith(("priority:", "tier:")):
+                fixed.append(f"  {stripped}")
+                continue
+            fixed.append(line)
+            continue
+
+        if stripped.startswith("- action:"):
+            fixed.append(f"    {stripped}")
+            continue
+
+        if stripped == "appliedTo:":
+            fixed.append("      appliedTo:")
+            continue
+
+        if stripped == "- namespaceSelector:":
+            fixed.append("        - namespaceSelector:")
+            continue
+
+        if stripped == "matchExpressions:":
+            fixed.append("            matchExpressions:")
+            continue
+
+        if stripped.startswith("- key:"):
+            fixed.append(f"              {stripped}")
+            continue
+
+        if stripped.startswith("operator:"):
+            fixed.append(f"                {stripped}")
+            continue
+
+        if stripped.startswith("values:"):
+            fixed.append(f"                {stripped}")
+            continue
+
+        if stripped.startswith("enableLogging:"):
+            fixed.append(f"      {stripped}")
+            continue
+
+        if stripped.startswith("name:"):
+            fixed.append(f"      {stripped}")
+            continue
+
+        if stripped == "to:":
+            fixed.append("      to:")
+            continue
+
+        if stripped.startswith(("- fqdn:", "- ipBlock:")):
+            fixed.append(f"        {stripped}")
+            continue
+
+        if stripped.startswith("cidr:"):
+            fixed.append(f"          {stripped}")
+            continue
+
+        if stripped == "ports:":
+            fixed.append("      ports:")
+            continue
+
+        if stripped.startswith("- protocol:"):
+            fixed.append(f"        {stripped}")
+            continue
+
+        if stripped.startswith("port:"):
+            fixed.append(f"          {stripped}")
             continue
 
         if stripped.startswith(("priority:", "tier:")):
             in_egress = False
-            in_ports = False
-            in_to = False
             fixed.append(f"  {stripped}")
             continue
 
-        if in_egress:
-            if stripped.startswith("- action:"):
-                in_ports = False
-                in_to = False
-                fixed.append(f"    {stripped}")
-                continue
-
-            if stripped == "appliedTo:":
-                fixed.append("      appliedTo:")
-                continue
-
-            if stripped == "- namespaceSelector:":
-                fixed.append("        - namespaceSelector:")
-                continue
-
-            if stripped == "matchExpressions:":
-                fixed.append("            matchExpressions:")
-                continue
-
-            if stripped.startswith("- key:"):
-                fixed.append(f"              {stripped}")
-                continue
-
-            if stripped.startswith("operator:"):
-                fixed.append(f"                {stripped}")
-                continue
-
-            if stripped.startswith("values:"):
-                fixed.append(f"                {stripped}")
-                continue
-
-            if stripped.startswith("enableLogging:"):
-                in_ports = False
-                in_to = False
-                fixed.append(f"      {stripped}")
-                continue
-
-            if stripped.startswith("name:"):
-                in_ports = False
-                in_to = False
-                fixed.append(f"      {stripped}")
-                continue
-
-            if stripped == "to:":
-                in_to = True
-                in_ports = False
-                fixed.append("      to:")
-                continue
-
-            if stripped.startswith(("- fqdn:", "- ipBlock:")):
-                fixed.append(f"        {stripped}")
-                continue
-
-            if stripped.startswith("cidr:"):
-                fixed.append(f"          {stripped}")
-                continue
-
-            if stripped == "ports:":
-                in_ports = True
-                in_to = False
-                fixed.append("      ports:")
-                continue
-
-            if stripped.startswith("- protocol:"):
-                fixed.append(f"        {stripped}")
-                continue
-
-            if stripped.startswith("port:"):
-                fixed.append(f"          {stripped}")
-                continue
-
-        # fallback: keep original line if it doesn't match any known broken pattern
         fixed.append(line)
 
     return "\n".join(fixed) + "\n"
@@ -188,40 +309,57 @@ def load_existing_yaml(path):
         for idx, line in enumerate(repaired.splitlines(), start=1):
             print(f"{idx:>4} {line}")
 
-        # Parse repaired text
         return yaml.load(repaired)
 
-That is the immediate fix.
 
-There is also a second issue you are ignoring: your expected new rule name is impossible from the JSON you showed earlier. Your JSON had:
+def to_plain(obj):
+    if isinstance(obj, dict):
+        return {k: to_plain(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [to_plain(v) for v in obj]
+    return obj
 
-"purpose": "destination_fqdn"
 
-So your script will generate:
+def rules_equal(rule_a, rule_b):
+    return to_plain(rule_a) == to_plain(rule_b)
 
-name: destination_fqdn
 
-not:
+def rule_exists(doc, new_rule):
+    for existing in doc["spec"]["egress"]:
+        if rules_equal(existing, new_rule):
+            return True
+    return False
 
-name: Egress rule for MECC V2
 
-If you want that exact name, send it explicitly in the JSON:
+def save_yaml(doc, path):
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w") as f:
+        yaml.dump(doc, f)
 
-{
-  "ticket_number": "INC-MECC-005",
-  "requester": "network-team@medtronic.com",
-  "cluster": "abrc1l-atlas-stg",
-  "rules": [
-    {
-      "source_namespace": "livelink-ignition",
-      "destination_ip": "10.76.217.22",
-      "destination_fqdn": "stg.mecc.livelink.medtronic.com",
-      "ports": "443",
-      "name": "Egress rule for MECC V2"
-    }
-  ]
-}
 
-One more thing: this repair is a temporary shield, not a clean design. The real problem is that the source file in the repo is malformed. The proper fix is to correct that file once in the target branch. Otherwise you are building automation on corrupted input, which is a bad idea.
+def main():
+    data = load_ticket_data()
+    ticket = data["ticket_number"]
+    cluster = data["cluster"]
+    incoming_rules = data.get("rules", [])
 
-If you want, I can give you the full final parse_input.py already merged with this repair logic so you can paste it as a single file.
+    full_path = os.environ.get("POLICY_FULL_PATH")
+    if not full_path:
+        output_path = os.environ.get("OUTPUT_PATH", ".")
+        file_name = os.environ.get("FILE_NAME", "policy.yaml")
+        full_path = str(Path(output_path) / file_name)
+
+    doc = load_existing_yaml(full_path)
+    doc = ensure_base_document(doc, ticket, cluster)
+
+    for rule_data in incoming_rules:
+        new_rule = build_egress_rule(rule_data)
+        if not rule_exists(doc, new_rule):
+            doc["spec"]["egress"].append(new_rule)
+
+    save_yaml(doc, full_path)
+    print(f"Saved -> {full_path}")
+
+
+if __name__ == "__main__":
+    main()
