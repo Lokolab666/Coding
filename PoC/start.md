@@ -61,37 +61,18 @@ spec:
     appliedTo:
     - namespaceSelector:
         matchExpressions:
-          - key: "kubernetes.io/metadata.name"
-            operator: "In"
-            values: ["livelink-ignition"]
+        - key: "kubernetes.io/metadata.name"
+          operator: "In"
+          values: ["livelink-ignition"]
     enableLogging: true
-    name: Egress rule for MECC V2 
+    name: destination_fqdn
     to:
-      - fqdn: stg.mecc.livelink.medtronic.com
+    - fqdn: stg.mecc.livelink.medtronic.com
     ports:
-      - protocol: TCP
-        port: 443
-  - action: Allow
-    appliedTo:
-    - namespaceSelector:
-        matchExpressions:
-          - key: "kubernetes.io/metadata.name"
-            operator: "In"
-            values: ["livelink-ignition"]
-    enableLogging: true
-    name: STG MECC V2 NFS write access
-    to:
-      - fqdn: abrc1-avis3gw-test.corp.medtronic.com
-    ports:
-      - protocol: TCP
-        port: 2049
-      - protocol: TCP
-        port: 20048
-      - protocol: TCP
-        port: 32803
+    - protocol: TCP
+      port: 443
   priority: 80
-  tier: atlas-tenants
- 
+  tier: atlas-tenants 
 
 But I want the next result:
 apiVersion: crd.antrea.io/v1beta1
