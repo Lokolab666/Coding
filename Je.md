@@ -1,65 +1,29 @@
-Perfecto. Entonces la versión queda más simple, pero hay una consecuencia: al eliminar auditoría, pierden capacidad de demostrar quién modificó qué o por qué alguien fue saltado. Para un MVP está bien, pero si vuelve el conflicto, esa será la primera cosa que tendrán que reincorporar. No lo dejes como definitivo.
 
-Microsoft Lists permite crear listas con columnas de texto, número, choice, fecha, sí/no, etc., y Power Automate puede disparar flujos cuando se crea un elemento en una lista de SharePoint/Microsoft Lists. Eso nos alcanza para este MVP sin tocar ServiceNow. 
-
-Diseño ajustado
-
-Quedan solo estas listas:
-
-TeamMembers
-QueueState
-Incidents
-Credits
-
-Se elimina:
-
-AuditLog
-Priority
-Reason
-ServiceNowLink
-CanReceiveP1P2
-Cualquier lógica de P1/P2/P3/P4
-
-El flujo ahora solo sabe esto:
-
-¿El ticket es normal?
-¿Viene de India?
-¿Viene de weekend?
-¿Viene de after-hours?
-¿Es un merged/requisito recibido por correo?
-¿Debe contar o no?
-¿Quién tiene crédito de salto?
-¿Quién sigue en la cola?
-
-1. Lista TeamMembers
-
-Esta lista representa la cola oficial.
-
-Columna	Tipo	Ejemplo
-
-Title	Texto	Cristian
-MemberCode	Texto	CRISTIAN
-MemberName	Texto	Cristian
-Email	Texto	cristian@company.com
-QueueOrder	Número	6
-Active	Sí/No	Yes
+if(
+  greaterOrEquals(
+    int(outputs('Compose_QueueStateItem')?['LastAssignedOrder']),
+    variables('varMaxQueueOrder')
+  ),
+  1,
+  add(int(outputs('Compose_QueueStateItem')?['LastAssignedOrder']), 1)
+)
 
 
-Carga los 7 miembros:
 
-1 - JP
-2 - Daniel
-3 - William
-4 - Sebastian
-5 - Marcela
-6 - Cristian
-7 - David
 
-No agregaría más columnas todavía. Si empiezas a meter demasiadas reglas desde el principio, el flujo se vuelve difícil de mantener.
 
-2. Lista QueueState
 
-Esta lista guarda el punto actual de la cola.
+
+
+
+
+
+
+
+
+
+
+
 
 Columna	Tipo	Ejemplo
 
