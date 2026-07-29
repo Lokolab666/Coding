@@ -1,0 +1,2 @@
+I need generate documentation about "Adding flux "entry point" or "harness" for a team in an existing namespace - involves adding a serviceaccount, RbacDef for that SA, a gitRepo source". So look for each file (each file is the video transcription) and give me the documentation about this topic. Too, give me the reference (the title of the file) and explain in tech words for a do a knowledge document in my repo. No emojis, its a corporative topic
+Take your time, be carefull. This is important
