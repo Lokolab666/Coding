@@ -1,65 +1,40 @@
-kubectl get pod envoy-backend-gateway-2gw44 -n cis-genai-poc-system -o jsonpath='{.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[*].matchFields[*].values}'
-["awby1-atlas-prd-worker-node-pool-gdgxc-p7m2b-5pltm"]mesac2@CPC-mesac-4BM7S:~$ kubectl config current-context
-awby1-atlas-prd
-mesac2@CPC-mesac-4BM7S:~$  kubectl describe node awby1-atlas-prd-worker-node-pool-gdgxc-p7m2b-5pltm
-Name:               awby1-atlas-prd-worker-node-pool-gdgxc-p7m2b-5pltm
-Roles:              <none>
-Labels:             beta.kubernetes.io/arch=amd64
-                    beta.kubernetes.io/os=linux
-                    failure-domain.beta.kubernetes.io/zone=domain-c8
-                    kubernetes.io/arch=amd64
-                    kubernetes.io/hostname=awby1-atlas-prd-worker-node-pool-gdgxc-p7m2b-5pltm
-                    kubernetes.io/os=linux
-                    node.cluster.x-k8s.io/esxi-host=awby1-w2c1-esxi05.corp.medtronic.com
-                    run.tanzu.vmware.com/kubernetesDistributionVersion=v1.32.0---vmware.6-fips-vkr.2
-                    run.tanzu.vmware.com/tkr=v1.32.0---vmware.6-fips-vkr.2
-                    topology.kubernetes.io/zone=domain-c8
-Annotations:        alpha.kubernetes.io/provided-node-ip: 172.16.160.51
-                    cluster.x-k8s.io/annotations-from-machine:
-                    cluster.x-k8s.io/cluster-name: awby1-atlas-prd
-                    cluster.x-k8s.io/cluster-namespace: awby1-prod-ns
-                    cluster.x-k8s.io/labels-from-machine: node.cluster.x-k8s.io/esxi-host
-                    cluster.x-k8s.io/machine: awby1-atlas-prd-worker-node-pool-gdgxc-p7m2b-5pltm
-                    cluster.x-k8s.io/owner-kind: MachineSet
-                    cluster.x-k8s.io/owner-name: awby1-atlas-prd-worker-node-pool-gdgxc-p7m2b
-                    csi.volume.kubernetes.io/nodeid:
-                      {"csi.oneagent.dynatrace.com":"awby1-atlas-prd-worker-node-pool-gdgxc-p7m2b-5pltm","csi.vsphere.vmware.com":"awby1-atlas-prd-worker-node-p...
-                    kubeadm.alpha.kubernetes.io/cri-socket: unix:///var/run/containerd/containerd.sock
-                    node.alpha.kubernetes.io/ttl: 0
-                    volumes.kubernetes.io/controller-managed-attach-detach: true
-CreationTimestamp:  Tue, 21 Oct 2025 20:03:54 +0000
-Taints:             <none>
-Unschedulable:      false
-Lease:              Failed to get lease: leases.coordination.k8s.io "awby1-atlas-prd-worker-node-pool-gdgxc-p7m2b-5pltm" is forbidden: User "sso:mesac2@ent.core.medtronic.com" cannot get resource "leases" in API group "coordination.k8s.io" in the namespace "kube-node-lease"
-Conditions:
-  Type             Status  LastHeartbeatTime                 LastTransitionTime                Reason                       Message
-  ----             ------  -----------------                 ------------------                ------                       -------
-  MemoryPressure   False   Thu, 20 Aug 2026 22:03:43 +0000   Thu, 23 Jul 2026 20:10:51 +0000   KubeletHasSufficientMemory   kubelet has sufficient memory available
-  DiskPressure     False   Thu, 20 Aug 2026 22:03:43 +0000   Thu, 23 Jul 2026 20:10:51 +0000   KubeletHasNoDiskPressure     kubelet has no disk pressure
-  PIDPressure      False   Thu, 20 Aug 2026 22:03:43 +0000   Thu, 23 Jul 2026 20:10:51 +0000   KubeletHasSufficientPID      kubelet has sufficient PID available
-  Ready            True    Thu, 20 Aug 2026 22:03:43 +0000   Thu, 23 Jul 2026 20:10:51 +0000   KubeletReady                 kubelet is posting ready status
-Addresses:
-  InternalIP:  172.16.160.51
-  Hostname:
-Capacity:
-  cpu:                8
-  ephemeral-storage:  25625808Ki
-  hugepages-1Gi:      0
-  hugepages-2Mi:      0
-  memory:             32862124Ki
-  pods:               110
-Allocatable:
-  cpu:                7915m
-  ephemeral-storage:  23616744614
-  hugepages-1Gi:      0
-  hugepages-2Mi:      0
-  memory:             29069228Ki
-  pods:               110
-System Info:
-  Machine ID:                 60e7c70472eb489cbd632537ec9ee10e
-  System UUID:                651d1542-f569-468f-a8d6-624b8df66c7a
-  Boot ID:                    0d126d36-78ae-47d7-925b-0671d3572522
-  Kernel Version:             5.15.0-131-generic
+kubectl get deployment itops-nginx \
+  -n cis-genai-poc-system \
+  -o jsonpath='{.spec.template.spec.nodeSelector}{"\n"}'
+
+
+  kubectl get deployment itops-nginx \
+  -n cis-genai-poc-system \
+  -o jsonpath='{.metadata.labels}{"\n"}{.metadata.annotations}{"\n"}'
+
+
+
+  kubectl get pods -A -o json |
+jq -r '
+.items[]
+| select(.spec.nodeSelector["kubernetes.io/hostname"] != null)
+| [
+    .metadata.namespace,
+    .metadata.name,
+    .spec.nodeSelector["kubernetes.io/hostname"]
+  ]
+| @tsv'
+
+
+
+
+kubectl get pods -A --field-selector=status.phase=Pending
+
+
+kubectl get daemonset -n cis-genai-poc-system
+  
+  
+  
+  
+  
+  
+  
+  
   OS Image:                   Ubuntu 22.04.5 LTS
   Operating System:           linux
   Architecture:               amd64
