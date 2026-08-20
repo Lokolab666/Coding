@@ -1,3 +1,39 @@
+
+ kubectl get pod envoy-backend-gateway-2gw44 \
+  -n cis-genai-poc-system \
+  -o jsonpath='{.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[*].matchFields[*].values}'
+
+  kubectl describe node <NODE>
+
+  kubectl get daemonset -n cis-genai-poc-system
+
+  kubectl get pods \
+  -n cis-genai-poc-system \
+  -l app=envoy-backend-gateway \
+  -o wide
+
+  kubectl describe pod itops-nginx-86c87cf945-btgzn \
+  -n cis-genai-poc-system
+
+
+
+
+  for node in $(kubectl get nodes -o name | grep worker | cut -d/ -f2); do
+  echo "===== $node ====="
+  kubectl describe node "$node" | sed -n '/Allocated resources:/,/Events:/p'
+done
+
+
+
+
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
  kubectl get pods -A --field-selector=status.phase=Pending
 NAMESPACE              NAME                                READY   STATUS    RESTARTS   AGE
 cis-genai-poc-system   envoy-backend-gateway-2gw44         0/2     Pending   0          2d13h
