@@ -41,3 +41,52 @@ Once the providers are cached in Artifactory, GitLab runner #155 will download t
 If this is not possible, please advise the approved alternative for making these provider packages available to the GitLab runner.
 
 So, check  alternative for making these provider packages available to the GitLab runner in Dedicated
+
+Another info, this is from case.artifactory.com
+Set Up a Terraform client
+
+Repository
+ext-terraform-registry-remote
+ConfigureResolve
+Type password to insert your credentials to the code snippets
+Type Password
+For your Terraform command line client to work with this Terraform repository, log in to the Terraform client.
+Run the following command.
+
+terraform login case.artifacts.medtronic.com
+To resolve the Providers, add the following configuration to the ~/.terraformrc file.
+
+provider_installation {
+    direct {
+        exclude = ["registry.terraform.io/*/*"]
+    }
+    network_mirror {
+        url = "https://case.artifacts.medtronic.com/artifactory/api/terraform/ext-terraform-registry-remote/providers/"
+    }
+}
+
+Set Up a Terraform client
+
+Repository
+ext-terraform-registry-remote
+ConfigureResolve
+To resolve a Terraform module from Artifactory, simply configure the module in your HCL file (.tf) as follows.
+
+module "module-name" {
+    source  = "case.artifacts.medtronic.com/ext-terraform-registry-remote__namespace/module-name/provider(system)"
+}
+To resolve a Terraform provider from Artifactory, simply configure the provider in your HCL file (.tf) as follows.
+
+terraform {
+    required_providers {
+        provider-name = {
+            source = "namespace/provider-name"
+        }
+    }
+}
+
+Usefull links
+https://registry.terraform.io/providers/CiscoDevNet/aci/2.20.0
+https://registry.terraform.io/providers/netascode/utils/latest
+
+I cant upload the file providers because this is a remote repo. Remember, I am using Jfrog
