@@ -1,28 +1,43 @@
-Project:
-it-icons/connectivity-services/cisco-aci-epg-gitops
-
-Runner:
-#155 -  (zMpBDLU8)
- msplap1900.corp.medtronic.com
-
-Purpose:
-Enable the Cisco ACI GitOps pipeline to run OpenTofu validation and plan jobs using only approved internal Artifactory repositories. No direct Internet access is requested.
-
-Current status:
-- Runner #155 successfully pulls the approved OpenTofu image from Artifactory:
-  case.artifacts.medtronic.com/ext-docker-ghcr-remote/opentofu/opentofu:1.12.5
-- GitLab CI validation, plan-only execution, and GitLab remote state/locking have passed.
-- The ACI module download is blocked.
-
-Required Artifactory packages:
-1. OpenTofu provider: CiscoDevNet/aci
-2. OpenTofu provider: netascode/utils
-3. OpenTofu module: netascode/nac-aci/aci
-   Required version: 0.7.0
-
-Issue:
-During `tofu init`, the existing Artifactory Terraform registry can resolve the available version of `netascode/nac-aci/aci`, but it returns HTTP 404 when OpenTofu requests the actual module archive download.
-
-Request:
-Please make the listed providers and module available through the approved internal Terraform/OpenTofu registry. For `netascode/nac-aci/aci` version 0.7.0, please ensure both version discovery and module archive download work from GitLab runner #155.
+I have the next issue
+We need support completing OpenTofu provider delivery for the Cisco ACI GitOps project.
  
+Current CI design:
+- GitLab runner #155 uses only the internal Artifactory OpenTofu provider mirror.
+- No direct internet download is required for the standard pipeline.
+- The NaC ACI module is already vendored locally, so module archive delivery is no longer needed.
+ 
+Required providers:
+- registry.opentofu.org/ciscodevnet/aci v2.20.0
+- registry.opentofu.org/netascode/utils v1.0.2
+ 
+Issue:
+The GitLab CI job previously timed out when retrieving these providers through the configured Artifactory provider mirror.
+ 
+What we have done:
+I successfully generated signed linux_amd64 provider mirror packages on my laptop for both required providers.
+ 
+What is needed:
+Please confirm the correct Artifactory repository and path for uploading the generated providers directory. Also confirm whether I have permission to upload it, or whether the Artifactory team must upload it.
+ 
+Once the provider mirror is available in Artifactory, runner #155 will retrieve the providers through the existing CI network_mirror configuration.
+Please upload the attached provider folder into the Artifactory repository that serves this URL:
+https://case.artifacts.medtronic.com/artifactory/api/terraform/ext-terraform-registry-remote/providers/
+After extracting the ZIP, upload the registry.opentofu.org folder directly under the providers path, preserving all subfolders and files.
+If ext-terraform-registry-remote is read-only, please provide the writable local repository/path that feeds this provider mirror.
+
+And my checks were, because this is a remote artifactor:
+The ext-terraform-registry-remote is read-only, so look the next info:
+Registry URL
+https://registry.terraform.io
+Providers URL
+https://releases.hashicorp.com
+
+The reply form the customer was:
+Thank you for confirming the current Artifactory repository is read-only.
+Please configure it to retrieve and cache these required OpenTofu providers from registry.opentofu.org:
+ciscodevnet/aci v2.20.0
+netascode/utils v1.0.2
+Once the providers are cached in Artifactory, GitLab runner #155 will download them through the existing provider mirror configuration.
+If this is not possible, please advise the approved alternative for making these provider packages available to the GitLab runner.
+
+So, check  alternative for making these provider packages available to the GitLab runner in Dedicated
