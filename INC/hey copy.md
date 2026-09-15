@@ -1,3 +1,1 @@
-Que comportamientos son mas frecuentes, cuales son los que se pueden tratar en un solo proceso, cuales requieren mas profundidad . omportamiento repetitivos en cuestion a arquitectura, alcance, limitaciones Y como se podria abordar, enfocandose en un sistema de alertas tempranas. Que paso, como abordar y como arreglar
-
-En pocas palabras, con la informacion de los tickets que esta en el excel, busca esos tickets que hagan idea en un agente que valide la información y genere la alerta.
+Analiza el siguiente modelo operativo que esta en el documento, y en base a la documentacion que tienes en Drive y con la estructura que ya habias analizado antes, genera sugeerencias de mejora del modelo operativo
