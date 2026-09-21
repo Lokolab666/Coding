@@ -1,0 +1,21 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: compass-ci-playbook
+  labels:
+    app: compass-ci-playbook
+spec:
+  selector:
+    matchLabels:
+      app: compass-ci-playbook
+      app.kubernetes.io/name: compass-ci-playbook
+      app.kubernetes.io/environment: production
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: compass-ci-playbook
+        app.kubernetes.io/environment: production
+    spec:
+      containers:
+        - name: compass-ci-playbook

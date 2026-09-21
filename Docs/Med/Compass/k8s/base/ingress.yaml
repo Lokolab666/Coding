@@ -1,0 +1,42 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/actions.redirect-to-context-root: '{"type":"redirect","RedirectConfig": { "Protocol": "HTTPS", "host": "#{host}", "path": "/", "StatusCode": "HTTP_301"}}'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:872019488961:certificate/ca1689c8-33ef-4d82-b49d-2addd4282637
+    alb.ingress.kubernetes.io/group.name: intprd001
+    alb.ingress.kubernetes.io/inbound-cidrs: 10.0.0.0/8
+    alb.ingress.kubernetes.io/ip-address-type: ipv4
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}, {"HTTP": 80}]'
+    alb.ingress.kubernetes.io/load-balancer-attributes: routing.http2.enabled=true,idle_timeout.timeout_seconds=600
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-FS-1-2-Res-2020-10
+    alb.ingress.kubernetes.io/success-codes: 200,302
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/wafv2-acl-arn: "arn:aws:wafv2:us-east-1:872019488961:regional/webacl/TF-argo-custom/5faa64c1-d16a-4a45-884f-9f9ffa5bd273"
+  labels:
+    app.kubernetes.io/instance: compass-ci-playbook-production
+    app.kubernetes.io/name: compass-ci-playbook-ingress
+  name: compass-ci-playbook-production
+  namespace: compass-ci-playbook-production
+spec:
+  ingressClassName: alb-webdev
+  rules:
+  - host: compass-ci.medtronic.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: redirect-to-context-root
+            port:
+              name: use-annotation
+        path: /
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: compass-ci-playbook-service
+            port:
+              number: 80
+        path: /
+        pathType: Prefix

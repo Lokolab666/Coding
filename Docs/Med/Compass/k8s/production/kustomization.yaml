@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: compass-ci-playbook-production
+resources:
+- ../base
+- configmap.yaml
+
+commonLabels:
+  app.kubernetes.io/environment: production
+
+patchesStrategicMerge:
+- deployment-patch.yaml
+
+# Use image transformations
+images:
+- name: compass-ci-playbook
+  newName: case.artifacts.medtronic.com/bcp_web-docker-releases-virtual/com/medtronic/web/app/bcp-web/common/compass-ci-playbook
+  newTag: 1.6.23

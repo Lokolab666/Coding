@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compass-ci-playbook-configmap
+data:
+  MEDTRONIC_ENVIRONMENT_DEPLOYMENT: "PRODUCTION"
+  DEFAULT_HOST_DOMAIN: "argo-prd.eks.mdtcloud.io"
+  TEST_ITEM: "1"
