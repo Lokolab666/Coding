@@ -1,120 +1,383 @@
-$K -n "$NS" get pods
+ curl -sS \
+>   -o /dev/null \
+>   -D - \
+>   --connect-timeout 10 \
+>   --max-time 30 \
+>   "https://edcmdt-test.medtronic.com/oracleclinicalrdcsso/"
+HTTP/2 302 
+date: Mon, 28 Sep 2026 16:49:48 GMT
+content-type: text/html; charset=iso-8859-1
+content-length: 584
+location: https://edcmdt-test.medtronic.com/oracleclinicalrdcsso/login.html?target_link_uri=https%3A%2F%2Fedcmdt-test.medtronic.com%3A443%2Foracleclinicalrdcsso%2F&method=get&oidc_callback=https%3A%2F%2Fedcmdt-test.medtronic.com%2Foracleclinicalrdcsso%2Fredirect&x_csrf=V2YNkAmaFI0
+server: Apache
+set-cookie: x_csrf=V2YNkAmaFI0; Path=/; Secure; HttpOnly; SameSite=Strict
 
-NAME                                        READY   STATUS    RESTARTS   AGE
-oracleclinicalrdcsso-dev-57f47458d9-cqlh9   1/1     Running   0          7d2h
-oracleclinicalrdcsso-dev-57f47458d9-kz5nz   1/1     Running   0          2d
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" get events \
->   --sort-by=.metadata.creationTimestamp |
-> grep -Ei 'secret|provider|csi|mount|accessdenied|failed'
-No resources found in argo-oracleclinicalrdcsso-dev namespace.
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" get pods
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ curl -sS \
+>   -D - \
+>   --connect-timeout 10 \
+>   --max-time 30 \
+>   "https://edcmdt-test.medtronic.com/oracleclinicalrdcsso/build.json?ALB"
+HTTP/2 200 
+date: Mon, 28 Sep 2026 16:49:59 GMT
+content-type: application/json;charset=utf-8
+server: Apache
+vary: Origin,Access-Control-Request-Method,Access-Control-Request-Headers
 
-NAME                                        READY   STATUS    RESTARTS   AGE
-oracleclinicalrdcsso-dev-57f47458d9-cqlh9   1/1     Running   0          7d2h
-oracleclinicalrdcsso-dev-57f47458d9-kz5nz   1/1     Running   0          2d
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" get events \
->   --sort-by=.metadata.creationTimestamp |
-> grep -Ei 'secret|provider|csi|mount|accessdenied|failed'
-No resources found in argo-oracleclinicalrdcsso-dev namespace.
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" get pods -o yaml |
-> grep -nEi 'secrets-store|secretProviderClass|csi:|secretName'
-219:        secretName: secrets-files
-309:        secretName: secrets-providers
-661:        secretName: secrets-files
-751:        secretName: secrets-providers
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" get secretproviderclasses.secrets-store.csi.x-k8s.io 2>/dev/null
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" get externalsecrets.external-secrets.io 2>/dev/null
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" get secrets \
->   -o custom-columns='NAME:.metadata.name,TYPE:.type,CREATED:.metadata.creationTimestamp'
-NAME                                                      TYPE                 CREATED
-dynatrace-bootstrapper-certs                              Opaque               2026-06-11T08:58:24Z
-dynatrace-bootstrapper-config                             Opaque               2026-06-11T08:58:23Z
-secrets                                                   opaque               2024-06-25T19:29:04Z
-secrets-files                                             opaque               2024-06-25T19:29:04Z
-secrets-providers                                         opaque               2024-06-25T19:29:04Z
-sh.helm.release.v1.oracleclinicalrdcsso-dev-ingress.v10   helm.sh/release.v1   2025-10-22T11:49:28Z
-sh.helm.release.v1.oracleclinicalrdcsso-dev-ingress.v11   helm.sh/release.v1   2026-02-01T05:09:57Z
-sh.helm.release.v1.oracleclinicalrdcsso-dev-ingress.v12   helm.sh/release.v1   2026-02-12T11:42:37Z
-sh.helm.release.v1.oracleclinicalrdcsso-dev-ingress.v13   helm.sh/release.v1   2026-03-17T18:42:06Z
-sh.helm.release.v1.oracleclinicalrdcsso-dev-ingress.v14   helm.sh/release.v1   2026-03-31T12:46:22Z
-sh.helm.release.v1.oracleclinicalrdcsso-dev.v4            helm.sh/release.v1   2026-03-31T12:59:18Z
-sh.helm.release.v1.oracleclinicalrdcsso-dev.v5            helm.sh/release.v1   2026-03-31T13:19:30Z
-sh.helm.release.v1.oracleclinicalrdcsso-dev.v6            helm.sh/release.v1   2026-04-01T10:00:43Z
-sh.helm.release.v1.oracleclinicalrdcsso-dev.v7            helm.sh/release.v1   2026-05-07T08:10:53Z
-sh.helm.release.v1.oracleclinicalrdcsso-dev.v8            helm.sh/release.v1   2026-05-07T14:06:32Z
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ for pod in $($K -n "$NS" get pods -o name); do
+{
+    "name": "OracleClinicalRDCSSO",
+    "version": "3.4.298t1",
+    "snapshot": "SNAPSHOT",
+    "buildNumber": "3871746",
+    "environment": "DEV"
+
+     for pod in $($K -n "$NS" get pods -o name); do
 >   echo "===== $pod ====="
->   $K -n "$NS" describe "$pod" | sed -n '/Events:/,$p'
+> 
+>   $K -n "$NS" logs "$pod" \
+>     --all-containers \
+>     --since=24h \
+>     --tail=3000 2>&1 |
+>   grep -Ei 'oauth|oidc|auth0|provider|signin|login|authentication|ORA-|JDBC|SQL' |
+>   grep -Ev 'obs-otel-agent-collector|OkHttpGrpcExporter' |
+>   tail -n 150
 > done
-
 ===== pod/oracleclinicalrdcsso-dev-57f47458d9-cqlh9 =====
-Events:          <none>
 ===== pod/oracleclinicalrdcsso-dev-57f47458d9-kz5nz =====
-Events:          <none>
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ for secret in secrets secrets-files secrets-providers; do
+>   echo "===== $secret ====="
+> 
+>   $K -n "$NS" get secret "$secret" -o json |
+>   jq -r '.data | keys[]'
+> done
+===== secrets =====
+CONTRAST__API__API_KEY
+RDCSSO_PW
+external_PW
+internal_PW
+===== secrets-files =====
+build.json
+cacerts
+contrast_security.yml
+log4j-init-file.xml
+login.html
+===== secrets-providers =====
+login.microsoftonline.com-2F0a29d274-1367-4a8f-99c5-90c3dc7d4043-2Fv2.0.client
+login.microsoftonline.com-2F0a29d274-1367-4a8f-99c5-90c3dc7d4043-2Fv2.0.conf
+login.microsoftonline.com-2F0a29d274-1367-4a8f-99c5-90c3dc7d4043-2Fv2.0.provider
+signin-stage.medtronic.com.client
+signin-stage.medtronic.com.conf
+signin-stage.medtronic.com.provider
 
-$K -n kube-system get daemonsets,pods |
-> grep -Ei 'secret|csi|provider'
-daemonset.apps/ebs-csi-node           5         5         5       5            5           kubernetes.io/os=linux     4y122d
-daemonset.apps/ebs-csi-node-windows   0         0         0       0            0           kubernetes.io/os=windows   4y122d
-daemonset.apps/efs-csi-node           5         5         5       5            5           kubernetes.io/os=linux     3y179d
-pod/ebs-csi-controller-ccd7db55f-2lh7p            6/6     Running   2 (27d ago)      41d
-pod/ebs-csi-controller-ccd7db55f-6m6ds            6/6     Running   0                79m
-pod/ebs-csi-node-7qxkm                            3/3     Running   0                41d
-pod/ebs-csi-node-8cj2f                            3/3     Running   0                41d
-pod/ebs-csi-node-mmblv                            3/3     Running   0                3d2h
-pod/ebs-csi-node-q7jts                            3/3     Running   0                90m
-pod/ebs-csi-node-q9zq5                            3/3     Running   0                41d
-pod/efs-csi-controller-7765c66789-qfnt8           3/3     Running   0                41d
-pod/efs-csi-controller-7765c66789-wz8sq           3/3     Running   0                41d
-pod/efs-csi-node-6bx7q                            3/3     Running   0                41d
-pod/efs-csi-node-8f2dg                            3/3     Running   0                41d
-pod/efs-csi-node-j56sf                            3/3     Running   0                90m
-pod/efs-csi-node-mxdfm                            3/3     Running   0                41d
-pod/efs-csi-node-tm596                            3/3     Running   0                3d2h
 
-for pod in $($K -n "$NS" get pods -o name); do
-  echo "===== $pod ====="
 
-  $K -n "$NS" logs "$pod" \
-    --all-containers \
-    --since=4h \
-    --tail=500 2>&1 |
-  grep -Ei 'secret|credential|password|accessdenied|ORA-|JDBC|authentication|failed'
-done
-1:15:33:725 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
-[otel.javaagent 2026-09-28 11:15:53:733 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:16:28:738 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:16:43:743 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
-[otel.javaagent 2026-09-28 11:16:58:746 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
-[otel.javaagent 2026-09-28 11:17:13:755 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:17:28:759 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
-[otel.javaagent 2026-09-28 11:17:53:767 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:18:08:772 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
-[otel.javaagent 2026-09-28 11:18:28:781 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:18:48:789 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:19:08:793 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:19:23:798 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
-[otel.javaagent 2026-09-28 11:19:38:804 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:19:53:808 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
-[otel.javaagent 2026-09-28 11:20:08:814 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:20:23:819 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:20:53:826 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:21:13:831 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:21:33:836 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:21:58:844 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:22:13:848 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:22:38:854 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:22:53:859 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
-[otel.javaagent 2026-09-28 11:23:33:865 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:23:53:873 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:24:13:877 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:24:33:884 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:24:58:893 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:25:13:897 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:25:33:904 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:25:48:908 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
-[otel.javaagent 2026-09-28 11:26:28:917 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:26:43:920 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
-[otel.javaagent 2026-09-28 11:26:58:924 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
-[otel.javaagent 2026-09-28 11:27:23:927 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
-[otel.javaagent 2026-09-28 11:27:38:932 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+ $K -n "$NS" get deployment oracleclinicalrdcsso-dev -o json |
+> jq '{
+>   volumes: [.spec.template.spec.volumes[] | select(.secret)],
+>   mounts: [.spec.template.spec.containers[].volumeMounts[]]
+> }'
+{
+  "volumes": [
+    {
+      "name": "secretsvol",
+      "secret": {
+        "defaultMode": 292,
+        "items": [
+          {
+            "key": "login.html",
+            "path": "login.html"
+          },
+          {
+            "key": "cacerts",
+            "path": "cacerts"
+          },
+          {
+            "key": "log4j-init-file.xml",
+            "path": "log4j-init-file.xml"
+          },
+          {
+            "key": "contrast_security.yml",
+            "path": "contrast_security.yml"
+          },
+          {
+            "key": "build.json",
+            "path": "build.json"
+          }
+        ],
+        "secretName": "secrets-files"
+      }
+    },
+    {
+      "name": "providers-vol",
+      "secret": {
+        "defaultMode": 292,
+        "items": [
+          {
+            "key": "dev.login.medtronic.com-2Foauth2-2Fausqxu4lutnO83mOb1d6.client",
+            "path": "dev.login.medtronic.com%2Foauth2%2Fausqxu4lutnO83mOb1d6.client"
+          },
+          {
+            "key": "dev.login.medtronic.com-2Foauth2-2Fausqxu4lutnO83mOb1d6.conf",
+            "path": "dev.login.medtronic.com%2Foauth2%2Fausqxu4lutnO83mOb1d6.conf"
+          },
+          {
+            "key": "dev.login.medtronic.com-2Foauth2-2Fausqxu4lutnO83mOb1d6.provider",
+            "path": "dev.login.medtronic.com%2Foauth2%2Fausqxu4lutnO83mOb1d6.provider"
+          },
+          {
+            "key": "dev.login.medtronic.com.client",
+            "path": "dev.login.medtronic.com.client"
+          },
+          {
+            "key": "dev.login.medtronic.com.conf",
+            "path": "dev.login.medtronic.com.conf"
+          },
+          {
+            "key": "dev.login.medtronic.com.provider",
+            "path": "dev.login.medtronic.com.provider"
+          },
+          {
+            "key": "login.medtronic.com-2Foauth2-2Faus16gc5wjVvJqXUg417.client",
+            "path": "login.medtronic.com%2Foauth2%2Faus16gc5wjVvJqXUg417.client"
+          },
+          {
+            "key": "login.medtronic.com-2Foauth2-2Faus16gc5wjVvJqXUg417.conf",
+            "path": "login.medtronic.com%2Foauth2%2Faus16gc5wjVvJqXUg417.conf"
+          },
+          {
+            "key": "login.medtronic.com-2Foauth2-2Faus16gc5wjVvJqXUg417.provider",
+            "path": "login.medtronic.com%2Foauth2%2Faus16gc5wjVvJqXUg417.provider"
+          },
+          {
+            "key": "login.medtronic.com.client",
+            "path": "login.medtronic.com.client"
+          },
+          {
+            "key": "login.medtronic.com.conf",
+            "path": "login.medtronic.com.conf"
+          },
+          {
+            "key": "login.medtronic.com.provider",
+            "path": "login.medtronic.com.provider"
+          },
+          {
+            "key": "login.microsoftonline.com-2F0a29d274-1367-4a8f-99c5-90c3dc7d4043-2Fv2.0.client",
+            "path": "login.microsoftonline.com%2F0a29d274-1367-4a8f-99c5-90c3dc7d4043%2Fv2.0.client"
+          },
+          {
+            "key": "login.microsoftonline.com-2F0a29d274-1367-4a8f-99c5-90c3dc7d4043-2Fv2.0.conf",
+            "path": "login.microsoftonline.com%2F0a29d274-1367-4a8f-99c5-90c3dc7d4043%2Fv2.0.conf"
+          },
+          {
+            "key": "login.microsoftonline.com-2F0a29d274-1367-4a8f-99c5-90c3dc7d4043-2Fv2.0.provider",
+            "path": "login.microsoftonline.com%2F0a29d274-1367-4a8f-99c5-90c3dc7d4043%2Fv2.0.provider"
+          },
+          {
+            "key": "login.microsoftonline.com-2Fd73a39db-6eda-495d-8000-7579f56d68b7-2Fv2.0.client",
+            "path": "login.microsoftonline.com%2Fd73a39db-6eda-495d-8000-7579f56d68b7%2Fv2.0.client"
+          },
+          {
+            "key": "login.microsoftonline.com-2Fd73a39db-6eda-495d-8000-7579f56d68b7-2Fv2.0.conf",
+            "path": "login.microsoftonline.com%2Fd73a39db-6eda-495d-8000-7579f56d68b7%2Fv2.0.conf"
+          },
+          {
+            "key": "login.microsoftonline.com-2Fd73a39db-6eda-495d-8000-7579f56d68b7-2Fv2.0.provider",
+            "path": "login.microsoftonline.com%2Fd73a39db-6eda-495d-8000-7579f56d68b7%2Fv2.0.provider"
+          },
+          {
+            "key": "stage.login.medtronic.com-2Foauth2-2Faus12k2r9jvwY2zRl417.client",
+            "path": "stage.login.medtronic.com%2Foauth2%2Faus12k2r9jvwY2zRl417.client"
+          },
+          {
+            "key": "stage.login.medtronic.com-2Foauth2-2Faus12k2r9jvwY2zRl417.conf",
+            "path": "stage.login.medtronic.com%2Foauth2%2Faus12k2r9jvwY2zRl417.conf"
+          },
+          {
+            "key": "stage.login.medtronic.com-2Foauth2-2Faus12k2r9jvwY2zRl417.provider",
+            "path": "stage.login.medtronic.com%2Foauth2%2Faus12k2r9jvwY2zRl417.provider"
+          },
+          {
+            "key": "stage.login.medtronic.com.client",
+            "path": "stage.login.medtronic.com.client"
+          },
+          {
+            "key": "stage.login.medtronic.com.conf",
+            "path": "stage.login.medtronic.com.conf"
+          },
+          {
+            "key": "stage.login.medtronic.com.provider",
+            "path": "stage.login.medtronic.com.provider"
+          },
+          {
+            "key": "test.login.medtronic.com-2Foauth2-2Faus1n3gftlEI6n8B70x7.client",
+            "path": "test.login.medtronic.com%2Foauth2%2Faus1n3gftlEI6n8B70x7.client"
+          },
+          {
+            "key": "test.login.medtronic.com-2Foauth2-2Faus1n3gftlEI6n8B70x7.conf",
+            "path": "test.login.medtronic.com%2Foauth2%2Faus1n3gftlEI6n8B70x7.conf"
+          },
+          {
+            "key": "test.login.medtronic.com-2Foauth2-2Faus1n3gftlEI6n8B70x7.provider",
+            "path": "test.login.medtronic.com%2Foauth2%2Faus1n3gftlEI6n8B70x7.provider"
+          },
+          {
+            "key": "test.login.medtronic.com.client",
+            "path": "test.login.medtronic.com.client"
+          },
+          {
+            "key": "test.login.medtronic.com.conf",
+            "path": "test.login.medtronic.com.conf"
+          },
+          {
+            "key": "test.login.medtronic.com.provider",
+            "path": "test.login.medtronic.com.provider"
+          },
+          {
+            "key": "signin-dev.medtronic.com.client",
+            "path": "signin-dev.medtronic.com.client"
+          },
+          {
+            "key": "signin-dev.medtronic.com.conf",
+            "path": "signin-dev.medtronic.com.conf"
+          },
+          {
+            "key": "signin-dev.medtronic.com.provider",
+            "path": "signin-dev.medtronic.com.provider"
+          },
+          {
+            "key": "signin-test.medtronic.com.client",
+            "path": "signin-test.medtronic.com.client"
+          },
+          {
+            "key": "signin-test.medtronic.com.conf",
+            "path": "signin-test.medtronic.com.conf"
+          },
+          {
+            "key": "signin-test.medtronic.com.provider",
+            "path": "signin-test.medtronic.com.provider"
+          },
+          {
+            "key": "signin-stage.medtronic.com.client",
+            "path": "signin-stage.medtronic.com.client"
+          },
+          {
+            "key": "signin-stage.medtronic.com.conf",
+            "path": "signin-stage.medtronic.com.conf"
+          },
+          {
+            "key": "signin-stage.medtronic.com.provider",
+            "path": "signin-stage.medtronic.com.provider"
+          },
+          {
+            "key": "signin.medtronic.com.client",
+            "path": "signin.medtronic.com.client"
+          },
+          {
+            "key": "signin.medtronic.com.conf",
+            "path": "signin.medtronic.com.conf"
+          },
+          {
+            "key": "signin.medtronic.com.provider",
+            "path": "signin.medtronic.com.provider"
+          }
+        ],
+        "optional": true,
+        "secretName": "secrets-providers"
+      }
+    }
+  ],
+  "mounts": [
+    {
+      "mountPath": "/tmp",
+      "name": "tmp"
+    },
+    {
+      "mountPath": "/otel",
+      "name": "otel-volume"
+    },
+    {
+      "mountPath": "/var/log",
+      "name": "var-log"
+    },
+    {
+      "mountPath": "/var/log/apache2",
+      "name": "var-log-apache2"
+    },
+    {
+      "mountPath": "/run/apache2",
+      "name": "run-apache2"
+    },
+    {
+      "mountPath": "/var/www/localhost/htdocs/login.html",
+      "name": "secretsvol",
+      "readOnly": true,
+      "subPath": "login.html"
+    },
+    {
+      "mountPath": "/opt/java/openjdk/lib/security/cacerts",
+      "name": "secretsvol",
+      "readOnly": true,
+      "subPath": "cacerts"
+    },
+    {
+      "mountPath": "/appDataDir/log4j-init-file.xml",
+      "name": "secretsvol",
+      "readOnly": true,
+      "subPath": "log4j-init-file.xml"
+    },
+    {
+      "mountPath": "/var/cache/mod_auth_openidc/metadata",
+      "name": "providers-vol"
+    },
+    {
+      "mountPath": "/var/mntfiles/build.json",
+      "name": "secretsvol",
+      "readOnly": true,
+      "subPath": "build.json"
+    },
+    {
+      "mountPath": "/contrast/contrast_security.yml",
+      "name": "secretsvol",
+      "readOnly": true,
+      "subPath": "contrast_security.yml"
+    }
+  ]
+}
+
+ curl.exe -v `
+>>   --connect-timeout 10 `
+>>   "https://edcmdt-test.medtronic.com/oracleclinicalrdcsso/"
+* Host edcmdt-test.medtronic.com:443 was resolved.
+* IPv6: (none)
+* IPv4: 10.210.90.218, 10.210.91.111, 10.210.91.38
+*   Trying 10.210.90.218:443...
+* schannel: disabled automatic use of client certificate
+* ALPN: curl offers http/1.1
+* ALPN: server accepted http/1.1
+* Established connection to edcmdt-test.medtronic.com (10.210.90.218 port 443) from 10.213.87.36 port 50929
+* using HTTP/1.x
+> GET /oracleclinicalrdcsso/ HTTP/1.1
+> Host: edcmdt-test.medtronic.com
+> User-Agent: curl/8.21.0
+> Accept: */*
+>
+* Request completely sent off
+< HTTP/1.1 302 Found
+< Date: Mon, 28 Sep 2026 16:54:52 GMT
+< Content-Type: text/html; charset=iso-8859-1
+< Content-Length: 584
+< Connection: keep-alive
+< Server: Apache
+< Set-Cookie: x_csrf=KFZoXo7NLd8; Path=/; Secure; HttpOnly; SameSite=Strict
+< Location: https://edcmdt-test.medtronic.com/oracleclinicalrdcsso/login.html?target_link_uri=https%3A%2F%2Fedcmdt-test.medtronic.com%3A443%2Foracleclinicalrdcsso%2F&method=get&oidc_callback=https%3A%2F%2Fedcmdt-test.medtronic.com%2Foracleclinicalrdcsso%2Fredirect&x_csrf=KFZoXo7NLd8
+<
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+<title>302 Found</title>
+</head><body>
+<h1>Found</h1>
+<p>The document has moved <a href="https://edcmdt-test.medtronic.com/oracleclinicalrdcsso/login.html?target_link_uri=https%3A%2F%2Fedcmdt-test.medtronic.com%3A443%2Foracleclinicalrdcsso%2F&amp;method=get&amp;oidc_callback=https%3A%2F%2Fedcmdt-test.medtronic.com%2Foracleclinicalrdcsso%2Fredirect&amp;x_csrf=KFZoXo7NLd8">here</a>.</p>
+<hr>
+<address>Apache Server at edcmdt-test.medtronic.com Port 8081</address>
+</body></html>
+* Connection #0 to host edcmdt-test.medtronic.com:443 left intact
+
