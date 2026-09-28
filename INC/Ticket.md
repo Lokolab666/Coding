@@ -1,85 +1,519 @@
-Worked for 2m 16s
+ export KUBECONFIG="$HOME/.kube/argo-dev.yaml"
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ K=./kubectl
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ NS=argo-oracleclinicalrdcsso-dev
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ HOST=edcmdt-test.medtronic.com
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ date -u
+Mon Sep 28 16:17:07 UTC 2026
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K config current-context
+TF-argo-dev
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" get deploy,rs,pods,svc,endpoints,endpointslices,ingress -o wide
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+NAME                                       READY   UP-TO-DATE   AVAILABLE   AGE    CONTAINERS   IMAGES                                                                                                                                         SELECTOR
+deployment.apps/oracleclinicalrdcsso-dev   2/2     2            2           193d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.298t1-SNAPSHOT   app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev
 
-The ticket is not an uv package/version problem. pip cannot validate the TLS certificate chain for pypi.org, so it never retrieves the package index. The final “No matching distribution” message is only a consequence of that earlier SSL failure.
+NAME                                                  DESIRED   CURRENT   READY   AGE    CONTAINERS   IMAGES                                                                                                                                         SELECTOR
+replicaset.apps/oracleclinicalrdcsso-dev-54dfb64468   0         0         0       181d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.294-SNAPSHOT     app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev,pod-template-hash=54dfb64468
+replicaset.apps/oracleclinicalrdcsso-dev-57f47458d9   2         2         2       144d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.298t1-SNAPSHOT   app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev,pod-template-hash=57f47458d9
+replicaset.apps/oracleclinicalrdcsso-dev-6b56d4df9d   0         0         0       193d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.3.28-SNAPSHOT      app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev,pod-template-hash=6b56d4df9d
+replicaset.apps/oracleclinicalrdcsso-dev-6b5d497754   0         0         0       144d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-releases-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.298t              app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev,pod-template-hash=6b5d497754
+replicaset.apps/oracleclinicalrdcsso-dev-6c85db7589   0         0         0       181d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.293-SNAPSHOT     app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev,pod-template-hash=6c85db7589
+replicaset.apps/oracleclinicalrdcsso-dev-6d5f5b65b9   0         0         0       186d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.272-SNAPSHOT     app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev,pod-template-hash=6d5f5b65b9
+replicaset.apps/oracleclinicalrdcsso-dev-799549b478   0         0         0       180d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.296t-SNAPSHOT    app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev,pod-template-hash=799549b478
+replicaset.apps/oracleclinicalrdcsso-dev-cbc5b6f8d    0         0         0       181d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.293-SNAPSHOT     app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev,pod-template-hash=cbc5b6f8d
 
-Documentation finding
+NAME                                            READY   STATUS    RESTARTS   AGE    IP               NODE                            NOMINATED NODE   READINESS GATES
+pod/oracleclinicalrdcsso-dev-57f47458d9-cqlh9   1/1     Running   0          7d2h   100.64.108.179   ip-10-210-91-7.ec2.internal     <none>           <none>
+pod/oracleclinicalrdcsso-dev-57f47458d9-kz5nz   1/1     Running   0          47h    100.64.5.106     ip-10-210-90-236.ec2.internal   <none>           <none>
 
-The Compass documentation says Python packages should use the Medtronic Artifactory-backed PyPI registry:
+NAME                               TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE     SELECTOR
+service/oracleclinicalrdcsso-dev   ClusterIP   172.20.120.134   <none>        80/TCP    2y94d   app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web
 
-https://case.artifacts.medtronic.com/artifactory/api/pypi/ext-pypi-python-remote/simple
+NAME                                 ENDPOINTS                               AGE
+endpoints/oracleclinicalrdcsso-dev   100.64.108.179:8081,100.64.5.106:8081   2y94d
 
-See:
+NAME                                                            ADDRESSTYPE   PORTS   ENDPOINTS                     AGE
+endpointslice.discovery.k8s.io/oracleclinicalrdcsso-dev-fxjmr   IPv4          8081    100.64.108.179,100.64.5.106   2y94d
 
-Containerizing Your Application — “Package Access via Artifactory → Pip”
+NAME                                                  CLASS        HOSTS                                                                                       ADDRESS                                                                   PORTS   AGE
+ingress.networking.k8s.io/edcmdt-test.medtronic.com   alb-webdev   edcmdt-test.medtronic.com,edcmdt-test.medtronic.com,edcmdt-test.medtronic.com + 5 more...   internal-k8s-intnon003-128bf56b67-943687084.us-east-1.elb.amazonaws.com   80      369d
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" get events \
+>   --sort-by=.metadata.creationTimestamp | tail -n 60
+No resources found in argo-oracleclinicalrdcsso-dev namespace.
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" get pods -o custom-columns='NAME:.metadata.name,READY:.status.containerStatuses[*].ready,RESTARTS:.status.containerStatuses[*].restartCount,STATUS:.status.phase,NODE:.spec.nodeName,IP:.status.podIP,STARTED:.status.startTime'
+NAME                                        READY   RESTARTS   STATUS    NODE                            IP               STARTED
+oracleclinicalrdcsso-dev-57f47458d9-cqlh9   true    0          Running   ip-10-210-91-7.ec2.internal     100.64.108.179   2026-09-21T14:13:07Z
+oracleclinicalrdcsso-dev-57f47458d9-kz5nz   true    0          Running   ip-10-210-90-236.ec2.internal   100.64.5.106     2026-09-26T16:22:33Z
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" get ingress -o custom-columns='NAME:.metadata.name,CLASS:.spec.ingressClassName,HOSTS:.spec.rules[*].host,ADDRESS:.status.loadBalancer.ingress[*].hostname'
+NAME                        CLASS        HOSTS                                                                                                                                                                                                             ADDRESS
+edcmdt-test.medtronic.com   alb-webdev   edcmdt-test.medtronic.com,edcmdt-test.medtronic.com,edcmdt-test.medtronic.com,edcmdt-test.medtronic.com,edcmdt-test.medtronic.com,edcmdt-test.medtronic.com,edcmdt-test.medtronic.com,edcmdt-test.medtronic.com   internal-k8s-intnon003-128bf56b67-943687084.us-east-1.elb.amazonaws.com
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" describe ingress
+Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
+Name:             edcmdt-test.medtronic.com
+Labels:           app.kubernetes.io/instance=oracleclinicalrdcsso-dev
+                  app.kubernetes.io/managed-by=Helm
+                  app.kubernetes.io/name=argo-ingress
+                  app.kubernetes.io/version=v1
+                  helm.sh/chart=argo-ingress-1.7.7
+                  helm.toolkit.fluxcd.io/name=oracleclinicalrdcsso-dev-ingress
+                  helm.toolkit.fluxcd.io/namespace=argo-oracleclinicalrdcsso-dev
+Namespace:        argo-oracleclinicalrdcsso-dev
+Address:          internal-k8s-intnon003-128bf56b67-943687084.us-east-1.elb.amazonaws.com
+Default backend:  default-http-backend:80 (<error: endpoints "default-http-backend" not found>)
+Rules:
+  Host                       Path  Backends
+  ----                       ----  --------
+  edcmdt-test.medtronic.com  
+                             /                       redirect-to-context-root:use-annotation (<error: endpoints "redirect-to-context-root" not found>)
+                             /oracleclinicalrdcsso   oracleclinicalrdcsso-dev:80 (100.64.108.179:8081,100.64.5.106:8081)
+  edcmdt-test.medtronic.com  
+                             /rdcadfsrnd   oracleclinicalrdcsso-dev:80 (100.64.108.179:8081,100.64.5.106:8081)
+  edcmdt-test.medtronic.com  
+                             /edc_helpdesk_docs54   oracleclinicalrdcsso-dev:80 (100.64.108.179:8081,100.64.5.106:8081)
+  edcmdt-test.medtronic.com  
+                             /Site_Training54   oracleclinicalrdcsso-dev:80 (100.64.108.179:8081,100.64.5.106:8081)
+  edcmdt-test.medtronic.com  
+                             /crfimages   oracleclinicalrdcsso-dev:80 (100.64.108.179:8081,100.64.5.106:8081)
+  edcmdt-test.medtronic.com  
+                             /opa54   oracleclinicalrdcsso-dev:80 (100.64.108.179:8081,100.64.5.106:8081)
+  edcmdt-test.medtronic.com  
+                             /news   oracleclinicalrdcsso-dev:80 (100.64.108.179:8081,100.64.5.106:8081)
+  edcmdt-test.medtronic.com  
+                             /tmp/   oracleclinicalrdcsso-dev:80 (100.64.108.179:8081,100.64.5.106:8081)
+Annotations:                 alb.ingress.kubernetes.io/actions.redirect-to-context-root:
+                               {"type":"redirect","RedirectConfig": { "Protocol": "HTTPS", "host": "#{host}", "path": "/oracleclinicalrdcsso/", "StatusCode": "HTTP_301"}...
+                             alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:389242548790:certificate/443226d1-1f1d-46ec-81bf-5a9708336205
+                             alb.ingress.kubernetes.io/group.name: intnon003
+                             alb.ingress.kubernetes.io/healthcheck-path: /oracleclinicalrdcsso/build.json?ALB
+                             alb.ingress.kubernetes.io/inbound-cidrs: 10.0.0.0/8
+                             alb.ingress.kubernetes.io/ip-address-type: ipv4
+                             alb.ingress.kubernetes.io/listen-ports: [{"HTTPS": 443}, {"HTTP": 80}]
+                             alb.ingress.kubernetes.io/load-balancer-attributes: routing.http2.enabled=true,idle_timeout.timeout_seconds=600
+                             alb.ingress.kubernetes.io/scheme: internal
+                             alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-FS-1-2-Res-2020-10
+                             alb.ingress.kubernetes.io/success-codes: 200,302
+                             alb.ingress.kubernetes.io/target-type: ip
+                             alb.ingress.kubernetes.io/wafv2-acl-arn:
+                               arn:aws:wafv2:us-east-1:389242548790:regional/webacl/TF-argo-custom/da31944e-a61d-4602-8df6-43458992be69
+                             meta.helm.sh/release-name: oracleclinicalrdcsso-dev-ingress
+                             meta.helm.sh/release-namespace: argo-oracleclinicalrdcsso-dev
+Events:                      <none>
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ dig +short "$HOST"
+internal-k8s-intnon003-128bf56b67-943687084.us-east-1.elb.amazonaws.com.
+10.210.91.38
+10.210.90.218
+10.210.91.111
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ curl -v \
+>   --connect-timeout 10 \
+>   --max-time 30 \
+>   -o /dev/null \
+>   "https://$HOST/"
+* Host edcmdt-test.medtronic.com:443 was resolved.
+* IPv6: (none)
+* IPv4: 10.210.90.218, 10.210.91.111, 10.210.91.38
+*   Trying 10.210.90.218:443...
+* ALPN: curl offers h2,http/1.1
+} [5 bytes data]
+* TLSv1.3 (OUT), TLS handshake, Client hello (1):
+} [512 bytes data]
+* SSL Trust Anchors:
+*   CAfile: /etc/pki/tls/certs/ca-bundle.crt
+{ [5 bytes data]
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+{ [104 bytes data]
+* TLSv1.2 (IN), TLS handshake, Certificate (11):
+{ [3020 bytes data]
+* TLSv1.2 (IN), TLS handshake, Server key exchange (12):
+{ [333 bytes data]
+* TLSv1.2 (IN), TLS handshake, Server finished (14):
+{ [4 bytes data]
+* TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
+} [70 bytes data]
+* TLSv1.2 (OUT), TLS change cipher, Change cipher spec (1):
+} [1 bytes data]
+* TLSv1.2 (OUT), TLS handshake, Finished (20):
+} [16 bytes data]
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+{ [16 bytes data]
+* SSL connection using TLSv1.2 / ECDHE-RSA-AES128-GCM-SHA256 / secp256r1 / rsaEncryption
+* ALPN: server accepted h2
+* Server certificate:
+*   subject: C=US; ST=Minnesota; L=Minneapolis; O="Medtronic, Inc."; CN=edcmdt-test.medtronic.com
+*   start date: Sep  2 00:00:00 2026 GMT
+*   expire date: Mar 19 23:59:59 2027 GMT
+*   issuer: C=US; O=DigiCert Inc; CN=DigiCert Global G2 TLS RSA SHA256 2020 CA1
+*   Certificate level 0: Public key type RSA (2048/112 Bits/secBits), signed using sha256WithRSAEncryption
+*   Certificate level 1: Public key type RSA (2048/112 Bits/secBits), signed using sha256WithRSAEncryption
+*   Certificate level 2: Public key type RSA (2048/112 Bits/secBits), signed using sha256WithRSAEncryption
+*   subjectAltName: "edcmdt-test.medtronic.com" matches cert's "edcmdt-test.medtronic.com"
+* OpenSSL verify result: 0
+* SSL certificate verified via OpenSSL.
+* Established connection to edcmdt-test.medtronic.com (10.210.90.218 port 443) from 10.210.90.208 port 46376 
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+  0      0   0      0   0      0      0      0                              0* using HTTP/2
+* [HTTP/2] [1] OPENED stream for https://edcmdt-test.medtronic.com/
+* [HTTP/2] [1] [:method: GET]
+* [HTTP/2] [1] [:scheme: https]
+* [HTTP/2] [1] [:authority: edcmdt-test.medtronic.com]
+* [HTTP/2] [1] [:path: /]
+* [HTTP/2] [1] [user-agent: curl/8.21.0]
+* [HTTP/2] [1] [accept: */*]
+} [5 bytes data]
+> GET / HTTP/2
+> Host: edcmdt-test.medtronic.com
+> User-Agent: curl/8.21.0
+> Accept: */*
+> 
+* Request completely sent off
+{ [5 bytes data]
+< HTTP/2 301 
+< server: awselb/2.0
+< date: Mon, 28 Sep 2026 16:21:08 GMT
+< content-type: text/html
+< content-length: 134
+< location: https://edcmdt-test.medtronic.com:443/oracleclinicalrdcsso/
+< 
+{ [134 bytes data]
+100    134 100    134   0      0   1485      0                              0
+* Connection #0 to host edcmdt-test.medtronic.com:443 left intact
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ echo | openssl s_client \
+>   -connect "${HOST}:443" \
+>   -servername "$HOST" 2>/dev/null |
+> openssl x509 -noout -subject -issuer -dates -ext subjectAltName
+subject=C=US, ST=Minnesota, L=Minneapolis, O=Medtronic, Inc., CN=edcmdt-test.medtronic.com
+issuer=C=US, O=DigiCert Inc, CN=DigiCert Global G2 TLS RSA SHA256 2020 CA1
+notBefore=Sep  2 00:00:00 2026 GMT
+notAfter=Mar 19 23:59:59 2027 GMT
+X509v3 Subject Alternative Name: 
+    DNS:edcmdt-test.medtronic.com
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ for deployment in $($K -n "$NS" get deployments -o name); do
+>   echo "===== $deployment ====="
+>   $K -n "$NS" rollout status "$deployment" --timeout=15s
+>   $K -n "$NS" rollout history "$deployment"
+> done
+===== deployment.apps/oracleclinicalrdcsso-dev =====
+deployment "oracleclinicalrdcsso-dev" successfully rolled out
+deployment.apps/oracleclinicalrdcsso-dev 
+REVISION  CHANGE-CAUSE
+1         <none>
+2         <none>
+3         <none>
+4         <none>
+5         <none>
+6         <none>
+7         <none>
+8         <none>
 
-Troubleshooting Guide — missing root/issuing CA guidance
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" get replicasets \
+>   --sort-by=.metadata.creationTimestamp \
+>   -o custom-columns='NAME:.metadata.name,CREATED:.metadata.creationTimestamp,DESIRED:.spec.replicas,READY:.status.readyReplicas,IMAGE:.spec.template.spec.containers[*].image'
+NAME                                  CREATED                DESIRED   READY    IMAGE
+oracleclinicalrdcsso-dev-6b56d4df9d   2026-03-18T19:14:24Z   0         <none>   case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.3.28-SNAPSHOT
+oracleclinicalrdcsso-dev-6d5f5b65b9   2026-03-26T11:31:13Z   0         <none>   case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.272-SNAPSHOT
+oracleclinicalrdcsso-dev-cbc5b6f8d    2026-03-31T12:29:50Z   0         <none>   case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.293-SNAPSHOT
+oracleclinicalrdcsso-dev-6c85db7589   2026-03-31T12:59:19Z   0         <none>   case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.293-SNAPSHOT
+oracleclinicalrdcsso-dev-54dfb64468   2026-03-31T13:19:32Z   0         <none>   case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.294-SNAPSHOT
+oracleclinicalrdcsso-dev-799549b478   2026-04-01T10:00:45Z   0         <none>   case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.296t-SNAPSHOT
+oracleclinicalrdcsso-dev-6b5d497754   2026-05-07T08:10:54Z   0         <none>   case.artifacts.medtronic.com/bcp_web-docker-releases-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.298t
+oracleclinicalrdcsso-dev-57f47458d9   2026-05-07T14:06:34Z   2         2        case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.298t1-SNAPSHOT
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K get \
+>   gitrepositories.source.toolkit.fluxcd.io,kustomizations.kustomize.toolkit.fluxcd.io \
+>   -A
+NAMESPACE     NAME                                                                                URL                                                                                                AGE      READY   STATUS
+aws-system    gitrepository.source.toolkit.fluxcd.io/app-aws-alb-controller                       https://code.medtronic.com/io-shared-services/applications/aws-alb-controller.git                  720d     True    stored artifact for revision 'v1.6.1@sha1:00467fa6b8732f53ae4b8b1674e9a2178e0d106b'
+aws-system    gitrepository.source.toolkit.fluxcd.io/app-aws-cloudwatch                           https://code.medtronic.com/io-shared-services/applications/aws-cloudwatch-for-eks.git              720d     True    stored artifact for revision 'v1.6.0@sha1:42167a2af31c35527336b73e37b7ab292a4b8388'
+default       gitrepository.source.toolkit.fluxcd.io/argononprod                                  https://code.medtronic.com/bcp_web/devops/fluxconfigs/argononprod.git                              4y120d   True    stored artifact for revision 'main@sha1:db5863e03053a917723e4ee9014bf3338d014513'
+flux-system   gitrepository.source.toolkit.fluxcd.io/acm-strat-alliance-integrations-dev-branch   https://medtronic.gitlab-dedicated.com/ACM_IT/acm-strat-alliance-integrations.git                  28d      True    stored artifact for revision 'dev@sha1:997d0717a2a37ddf8e59dc5531bb77fef36a363d'
+flux-system   gitrepository.source.toolkit.fluxcd.io/acm-strat-alliance-snop-dev-branch           https://medtronic.gitlab-dedicated.com/ACM_IT/acm-strat-alliance-snop.git                          88d      True    stored artifact for revision 'dev@sha1:2be64444570bc84dacccaa3e970b2d7ba9060190'
+flux-system   gitrepository.source.toolkit.fluxcd.io/askqms-dev-branch                            https://medtronic.gitlab-dedicated.com/CAS_SWFW/product-support/cas-ai-solutions.git               34h      True    stored artifact for revision 'dev@sha1:8468db875fbb0d31b3d56be9ade886c82d1fde7b'
+flux-system   gitrepository.source.toolkit.fluxcd.io/cic-help-dev-branch                          https://medtronic.gitlab-dedicated.com/ciam/cic-help.git                                           65d      True    stored artifact for revision 'dev@sha1:44c6c980f2b6e04bd1b823ac641987079da211f2'
+flux-system   gitrepository.source.toolkit.fluxcd.io/colorado-tickets-dev-branch                  https://medtronic.gitlab-dedicated.com/ACM_IT/colorado-tickets.git                                 28d      True    stored artifact for revision 'dev@sha1:cf284b34f0ebf6ba02243a9cbac55074850be97a'
+flux-system   gitrepository.source.toolkit.fluxcd.io/common-components                            https://code.medtronic.com/io-shared-services/kubernetes-management/flux-common-components.git     4y127d   True    stored artifact for revision 'v8.0.0@sha1:1f99228d475c2906347559de441db7d632a4378a'
+flux-system   gitrepository.source.toolkit.fluxcd.io/contract-gpt-backend-dev-branch              https://medtronic.gitlab-dedicated.com/PC_AI_Lab/contract-gpt-backend.git                          189d     True    stored artifact for revision 'dev@sha1:555cca5c2823b5561a73775ff4f99fbe4551dde2'
+flux-system   gitrepository.source.toolkit.fluxcd.io/contract-gpt-reactjs-dev-branch              https://medtronic.gitlab-dedicated.com/PC_AI_Lab/contract-gpt-reactjs.git                          196d     True    stored artifact for revision 'dev@sha1:afaaeafadaf31f8f7a737fe126b98f1585a4122f'
+flux-system   gitrepository.source.toolkit.fluxcd.io/cronjobsample-dev-branch                     https://medtronic.gitlab-dedicated.com/bcp_web/devops/sampleapplications/cronjobsample.git         173d     True    stored artifact for revision 'dev@sha1:9520967d4732eb97a4d483b546b524f79e3b94ca'
+flux-system   gitrepository.source.toolkit.fluxcd.io/einstein-dev-branch                          https://medtronic.gitlab-dedicated.com/bcp_web/common/einstein.git                                 325d     True    stored artifact for revision 'dev@sha1:78f403b4f3bf40d51d2a8f343782c21634f2c0a1'
+flux-system   gitrepository.source.toolkit.fluxcd.io/einstein-testing-branch                      https://medtronic.gitlab-dedicated.com/bcp_web/common/einstein.git                                 306d     True    stored artifact for revision 'testing@sha1:2ffebe6868aff32800cb66e5ca2e4aabb24b4049'
+flux-system   gitrepository.source.toolkit.fluxcd.io/flux-gitops                                  https://medtronic.gitlab-dedicated.com/bcp_web/devops/fluxconfigs/flux-gitops                      326d     True    stored artifact for revision 'main@sha1:1c6337e9914b5e3cef5abaf8dacb31d263007ffb'
+flux-system   gitrepository.source.toolkit.fluxcd.io/flux-system                                  https://code.medtronic.com/io-shared-services/kubernetes-management/389242548790-TF-argo-dev.git   4y127d   True    stored artifact for revision 'main@sha1:55cbf6de73eae05d1f079a00a74bc65454e88a38'
+flux-system   gitrepository.source.toolkit.fluxcd.io/newton-dev-branch                            https://medtronic.gitlab-dedicated.com/bcp_web/common/newton.git                                   83d      True    stored artifact for revision 'dev@sha1:6e917b0c3c11cc28c7130ae2a480600dba98145a'
+flux-system   gitrepository.source.toolkit.fluxcd.io/newton-testing-branch                        https://medtronic.gitlab-dedicated.com/bcp_web/common/newton.git                                   90d      True    stored artifact for revision 'testing@sha1:d68947a185af067b8bf9c9f0c9e8856b8d16b04c'
+flux-system   gitrepository.source.toolkit.fluxcd.io/oracleclinicalrdcsso-dev-branch              https://medtronic.gitlab-dedicated.com/bcp_web/migration-testing/OracleClinicalRDCSSO.git          59d      True    stored artifact for revision 'dev@sha1:883897da66f9eadcafd6ffcc9d05f793c04dcff6'
+flux-system   gitrepository.source.toolkit.fluxcd.io/profilemanagement-dev-branch                 https://medtronic.gitlab-dedicated.com/ciam/cic-profilemanagement.git                              19d      True    stored artifact for revision 'dev@sha1:83ee55eb739007ac7d2666f3058f71cc521c8562'
+flux-system   gitrepository.source.toolkit.fluxcd.io/profilemanagement-testing-branch             https://medtronic.gitlab-dedicated.com/ciam/cic-profilemanagement.git                              30d      True    stored artifact for revision 'testing@sha1:2802d2fa7b37a4d0a3be778870b64f8bd0e101ad'
+kube-system   gitrepository.source.toolkit.fluxcd.io/aws-efs-csi-driver                           https://code.medtronic.com/io-shared-services/applications/aws-efs-csi-driver.git                  4y120d   True    stored artifact for revision 'v1.12.2@sha1:1779ea94f9ee72e8218b9f7dc44c9e0f8b65bbef'
+webdev-helm   gitrepository.source.toolkit.fluxcd.io/webdev-helm-git                              https://code.medtronic.com/bcp_web/devops/helmcharts/argohelmcharts.git                            479d     True    stored artifact for revision 'main@sha1:620a2e0d05b9691417ad6e786ed41cc4008068c2'
 
-Contacts and Assignment Groups — Artifactory support is Infra-CICD IT Support-Global
-
-
-Recommended resolution
-
-Run these commands in PowerShell with the virtual environment active:
-
-.\.venv\Scripts\Activate.ps1
-
-python -m pip config --site set global.index-url `
-  "https://case.artifacts.medtronic.com/artifactory/api/pypi/ext-pypi-python-remote/simple"
-
-python -m pip install --upgrade pip
-python -m pip install uv
-
-uv --version
-
-Using --site stores the configuration in this virtual environment rather than changing every Python environment on the laptop.
-
-For a one-time test before saving the configuration:
-
-python -m pip install uv `
-  --index-url "https://case.artifacts.medtronic.com/artifactory/api/pypi/ext-pypi-python-remote/simple"
-
-If Artifactory also returns an SSL error
-
-Then Python does not trust the Medtronic root or issuing CA. Collect:
-
-python --version
-python -m pip --version
-python -m pip config debug
-
-curl.exe -Iv `
-  "https://case.artifacts.medtronic.com/artifactory/api/pypi/ext-pypi-python-remote/simple/uv/"
-
-The documentation’s certificate principle applies here: trust the approved root/issuing CA, not an individual server certificate. Once an approved PEM CA bundle is supplied by support, configure it for this environment:
-
-python -m pip config --site set global.cert "C:\path\to\approved-medtronic-ca-bundle.pem"
-python -m pip install uv
-
-Do not use --trusted-host, disable SSL verification, or download certificates from an unverified source.
-
-Ticket classification
-
-This is currently a local Python/package-source configuration issue, not a Compass cluster or deployment incident.
-
-If the Artifactory endpoint returns 401/403, or uv is unavailable through the remote repository: assign to Infra-CICD IT Support-Global, CI Jfrog Artifactory - PROD.
-
-If Artifactory works in the browser/curl but fails only in Python: route to workstation/Python certificate-trust support.
-
-Route to Infra-Argo-Global only if the same problem happens during a Compass CI pipeline or inside a deployed Compass workload.
-
-
-Suggested ticket response
-
-> The reported “No matching distribution found for uv” is secondary. The actual failure is TLS certificate validation while pip connects directly to pypi.org.
-
-Compass documentation requires Python packages to be obtained through the Medtronic Artifactory-backed PyPI registry. Please activate the virtual environment and run:
-
-python -m pip config --site set global.index-url "https://case.artifacts.medtronic.com/artifactory/api/pypi/ext-pypi-python-remote/simple"
-python -m pip install --upgrade pip
-python -m pip install uv
-uv --version
-
-If this produces an SSL, 401, or 403 error against case.artifacts.medtronic.com, please provide python --version, python -m pip --version, python -m pip config debug, and the new error. Artifactory access or CA-chain issues should be routed to Infra-CICD IT Support-Global.
-
-
-
-The documentation has a small gap: it gives the Linux /etc/pip.conf example, but does not currently show the equivalent Windows/PowerShell configuration above.
+NAMESPACE                             NAME                                                                            AGE      READY   STATUS
+acm-strat-alliance-integrations-dev   kustomization.kustomize.toolkit.fluxcd.io/acm-strat-alliance-integrations-dev   28d      True    Applied revision: dev@sha1:997d0717a2a37ddf8e59dc5531bb77fef36a363d
+acm-strat-alliance-snop-dev           kustomization.kustomize.toolkit.fluxcd.io/acm-strat-alliance-snop-dev           88d      True    Applied revision: dev@sha1:2be64444570bc84dacccaa3e970b2d7ba9060190
+argo-einstein-dev                     kustomization.kustomize.toolkit.fluxcd.io/einstein-dev                          325d     True    Applied revision: dev@sha1:78f403b4f3bf40d51d2a8f343782c21634f2c0a1
+askqms-dev                            kustomization.kustomize.toolkit.fluxcd.io/askqms-dev                            34h      False   Deployment/askqms-dev/askqms dry-run failed: admission webhook "mutate.kyverno.svc-fail" denied the request: mutation policy jvm-memory-policy error: failed to apply policy jvm-memory-policy rules [autogen-add-jvm-memory-env: failed to mutate elements: failed to evaluate mutate.foreach[0].preconditions: failed to substitute variables in condition key: failed to resolve imageData.configData.config.Labels.TAG_java || '' at path : failed to fetch image descriptor: case.artifacts.medtronic.com/bcp-web-docker-releases-virtual/com/medtronic/web/app/cas_swfw/product-support/cas-ai-solutions:latest, error: failed to fetch image descriptor: case.artifacts.medtronic.com/bcp-web-docker-releases-virtual/com/medtronic/web/app/cas_swfw/product-support/cas-ai-solutions:latest, error: failed to fetch image reference: case.artifacts.medtronic.com/bcp-web-docker-releases-virtual/com/medtronic/web/app/cas_swfw/product-support/cas-ai-solutions:latest, error: GET https://case.artifacts.medtronic.com/v2/bcp-web-docker-releases-virtual/com/medtronic/web/app/cas_swfw/product-support/cas-ai-solutions/manifests/latest: MANIFEST_UNKNOWN: The named manifest is not known to the registry.; map[manifest:com/medtronic/web/app/cas_swfw/product-support/cas-ai-solutions]]...
+aws-system                            kustomization.kustomize.toolkit.fluxcd.io/app-aws-alb-controller                720d     True    Applied revision: v1.6.1@sha1:00467fa6b8732f53ae4b8b1674e9a2178e0d106b
+aws-system                            kustomization.kustomize.toolkit.fluxcd.io/app-aws-cloudwatch                    720d     True    Applied revision: v1.6.0@sha1:42167a2af31c35527336b73e37b7ab292a4b8388
+cic-help-dev                          kustomization.kustomize.toolkit.fluxcd.io/cic-help-dev                          65d      True    Applied revision: dev@sha1:44c6c980f2b6e04bd1b823ac641987079da211f2
+colorado-tickets-dev                  kustomization.kustomize.toolkit.fluxcd.io/colorado-tickets-dev                  28d      True    Applied revision: dev@sha1:cf284b34f0ebf6ba02243a9cbac55074850be97a
+contract-gpt-backend-dev              kustomization.kustomize.toolkit.fluxcd.io/contract-gpt-backend-dev              189d     True    Applied revision: dev@sha1:555cca5c2823b5561a73775ff4f99fbe4551dde2
+contract-gpt-reactjs-dev              kustomization.kustomize.toolkit.fluxcd.io/contract-gpt-reactjs-dev              196d     True    Applied revision: dev@sha1:afaaeafadaf31f8f7a737fe126b98f1585a4122f
+cronjobsample-dev                     kustomization.kustomize.toolkit.fluxcd.io/cronjobsample-dev                     173d     True    Applied revision: dev@sha1:9520967d4732eb97a4d483b546b524f79e3b94ca
+default                               kustomization.kustomize.toolkit.fluxcd.io/argononprod                           4y120d   True    Applied revision: main@sha1:db5863e03053a917723e4ee9014bf3338d014513
+einstein-testing                      kustomization.kustomize.toolkit.fluxcd.io/einstein-testing                      306d     True    Applied revision: testing@sha1:2ffebe6868aff32800cb66e5ca2e4aabb24b4049
+flux-system                           kustomization.kustomize.toolkit.fluxcd.io/common-components                     4y127d   True    Applied revision: v8.0.0@sha1:1f99228d475c2906347559de441db7d632a4378a
+flux-system                           kustomization.kustomize.toolkit.fluxcd.io/customer-components                   4y120d   True    Applied revision: main@sha1:55cbf6de73eae05d1f079a00a74bc65454e88a38
+flux-system                           kustomization.kustomize.toolkit.fluxcd.io/flux-gitops-apps                      326d     True    Applied revision: main@sha1:1c6337e9914b5e3cef5abaf8dacb31d263007ffb
+flux-system                           kustomization.kustomize.toolkit.fluxcd.io/flux-gitops-infrastructure            222d     True    Applied revision: main@sha1:1c6337e9914b5e3cef5abaf8dacb31d263007ffb
+flux-system                           kustomization.kustomize.toolkit.fluxcd.io/flux-system                           4y127d   True    Applied revision: main@sha1:55cbf6de73eae05d1f079a00a74bc65454e88a38
+flux-system                           kustomization.kustomize.toolkit.fluxcd.io/terraform-provided                    3y85d    True    Applied revision: main@sha1:55cbf6de73eae05d1f079a00a74bc65454e88a38
+kube-system                           kustomization.kustomize.toolkit.fluxcd.io/aws-efs-csi-driver                    4y120d   True    Applied revision: v1.12.2@sha1:1779ea94f9ee72e8218b9f7dc44c9e0f8b65bbef
+newton-dev                            kustomization.kustomize.toolkit.fluxcd.io/newton-dev                            83d      True    Applied revision: dev@sha1:6e917b0c3c11cc28c7130ae2a480600dba98145a
+oracleclinicalrdcsso-dev              kustomization.kustomize.toolkit.fluxcd.io/oracleclinicalrdcsso-dev              59d      True    Applied revision: dev@sha1:883897da66f9eadcafd6ffcc9d05f793c04dcff6
+profilemanagement-dev                 kustomization.kustomize.toolkit.fluxcd.io/profilemanagement-dev                 19d      True    Applied revision: dev@sha1:83ee55eb739007ac7d2666f3058f71cc521c8562
+profilemanagement-testing             kustomization.kustomize.toolkit.fluxcd.io/profilemanagement-testing             30d      True    Applied revision: testing@sha1:2802d2fa7b37a4d0a3be778870b64f8bd0e101ad
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ for pod in $($K -n "$NS" get pods -o name); do
+>   echo "===== $pod ====="
+> 
+>   $K -n "$NS" logs "$pod" \
+>     --all-containers \
+>     --since=4h \
+>     --tail=500 2>&1 |
+>   grep -Ei 'ORA-|JDBC|SQL|timeout|refused|unreachable|SSL|PKIX|exception|error' |
+>   tail -n 100
+> donefor pod in $($K -n "$NS" get pods -o name); do
+bash: syntax error near unexpected token `do'
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $   echo "===== $pod ====="
+=====  =====
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ 
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $   $K -n "$NS" logs "$pod" \
+>     --all-containers \
+>     --since=4h \
+>     --tail=500 2>&1 |
+>   grep -Ei 'ORA-|JDBC|SQL|timeout|refused|unreachable|SSL|PKIX|exception|error' |
+>   tail -n 100
+error: You must provide one or more resources by argument or filename.
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ donefor pod in $($K -n "$NS" get pods -o name); do
+bash: syntax error near unexpected token `do'
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $   echo "===== $pod ====="
+=====  =====
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ 
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $   $K -n "$NS" logs "$pod" \
+>     --all-containers \
+>     --since=4h \
+>     --tail=500 2>&1 |
+>   grep -Ei 'ORA-|JDBC|SQL|timeout|refused|unreachable|SSL|PKIX|exception|error' |
+>   tail -n 100
+error: You must provide one or more resources by argument or filename.
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ done
+bash: syntax error near unexpected token `done'
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ for pod in $($K -n "$NS" get pods -o name); do
+>   echo "===== $pod ====="
+> 
+>   $K -n "$NS" logs "$pod" \
+>     --all-containers \
+>     --since=4h \
+>     --tail=500 2>&1 |
+>   grep -Ei 'ORA-|JDBC|SQL|timeout|refused|unreachable|SSL|PKIX|exception|error' |
+>   tail -n 100
+> done
+===== pod/oracleclinicalrdcsso-dev-57f47458d9-cqlh9 =====
+[otel.javaagent 2026-09-28 10:53:08:905 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 10:53:23:912 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 10:53:38:926 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:53:53:934 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 10:54:08:941 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:54:23:948 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:54:43:962 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:55:03:976 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:55:24:000 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:55:39:007 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:55:54:015 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:56:09:021 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:56:24:028 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 10:56:39:041 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:56:54:048 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:57:09:056 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:57:24:063 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:57:39:069 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 10:57:59:082 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:58:24:094 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:58:39:102 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 10:58:54:109 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:59:19:116 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:59:49:123 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:00:04:131 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:00:44:144 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:00:59:151 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:01:14:158 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:01:29:165 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:01:44:172 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:01:59:184 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:02:14:191 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:02:29:198 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:02:44:205 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:03:09:220 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:03:24:227 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:03:39:234 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:03:54:247 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:04:09:254 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:04:24:260 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:04:44:273 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:04:59:281 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:05:14:294 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:05:34:308 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:05:49:315 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:06:04:323 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:06:24:330 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:06:39:338 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:06:54:345 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:07:09:352 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:07:24:366 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:07:54:373 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:08:24:387 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:08:39:394 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:08:54:406 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:09:09:413 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:09:24:420 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:09:44:434 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:10:19:448 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:10:34:455 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:10:54:468 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:11:09:475 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:11:24:482 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:11:39:495 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:11:54:501 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:12:09:508 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:12:29:515 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:12:54:529 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:13:09:536 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:13:24:543 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:13:39:550 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:13:59:563 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:14:19:570 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:14:34:577 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:14:49:585 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:15:14:599 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:15:29:605 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:15:54:612 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:16:09:619 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:16:29:631 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:16:44:638 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:16:59:646 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:17:19:657 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:17:54:664 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:18:09:672 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:18:24:678 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:18:44:691 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:18:59:698 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:19:24:705 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:19:44:712 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:19:59:719 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:20:24:733 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:20:44:740 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:20:59:747 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:21:14:754 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:21:29:761 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:21:44:774 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:21:59:780 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:22:14:788 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:22:29:794 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+===== pod/oracleclinicalrdcsso-dev-57f47458d9-kz5nz =====
+[otel.javaagent 2026-09-28 10:52:28:341 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:52:43:344 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 10:52:58:349 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:53:18:354 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:53:38:361 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:53:58:367 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:54:13:370 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:54:28:375 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:54:43:380 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 10:54:58:387 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:55:13:392 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:55:43:397 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:55:58:400 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:56:13:404 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:56:28:407 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 10:56:43:410 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 10:56:58:414 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:57:18:419 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:57:38:427 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:57:53:432 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 10:58:13:437 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:58:28:443 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:58:48:447 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:59:03:450 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:59:28:457 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 10:59:48:465 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:00:03:470 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:00:38:476 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:00:58:483 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:01:18:490 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:01:33:493 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:01:48:503 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:02:03:505 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:02:18:509 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:02:33:513 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:02:48:520 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:03:13:527 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:03:43:535 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:03:58:539 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:04:13:542 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:04:28:548 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:04:43:552 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:04:58:555 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:05:13:560 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:05:48:566 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:06:03:571 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:06:18:574 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:06:33:578 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:06:48:581 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:07:18:588 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:07:33:592 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:07:48:596 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:08:03:601 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:08:18:607 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:08:33:612 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:08:58:621 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:09:13:625 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:09:28:630 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:09:48:633 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:10:13:642 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:10:28:645 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:10:43:651 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:10:58:657 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:11:13:661 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:11:43:666 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:11:58:670 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:12:13:674 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:12:28:677 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:12:43:680 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:13:13:684 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:13:28:688 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:13:43:693 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:14:13:699 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:14:28:703 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:14:48:711 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:15:03:715 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:15:18:720 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:15:33:725 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:15:53:733 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:16:28:738 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:16:43:743 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:16:58:746 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:17:13:755 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:17:28:759 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:17:53:767 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:18:08:772 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:18:28:781 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:18:48:789 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:19:08:793 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:19:23:798 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:19:38:804 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:19:53:808 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local
+[otel.javaagent 2026-09-28 11:20:08:814 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:20:23:819 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:20:53:826 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:21:13:831 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:21:33:836 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:21:58:844 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:22:13:848 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+[otel.javaagent 2026-09-28 11:22:38:854 -0500] [OkHttp http://obs-otel-agent-collector.observability.svc.cluster.local:4317/...] ERROR io.opentelemetry.exporter.internal.grpc.OkHttpGrpcExporter - Failed to export spans. The request could not be executed. Full error message: obs-otel-agent-collector.observability.svc.cluster.local: Name does not resolve
+AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ 
