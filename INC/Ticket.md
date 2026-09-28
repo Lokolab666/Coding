@@ -1,67 +1,156 @@
- export KUBECONFIG="$HOME/.kube/argo-dev.yaml"
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ K=./kubectl
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ NS=argo-oracleclinicalrdcsso-dev
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ HOST=edcmdt-test.medtronic.com
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ date -u
-Mon Sep 28 16:17:07 UTC 2026
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K config current-context
-TF-argo-dev
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" get deploy,rs,pods,svc,endpoints,endpointslices,ingress -o wide
-Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
-NAME                                       READY   UP-TO-DATE   AVAILABLE   AGE    CONTAINERS   IMAGES                                                                                                                                         SELECTOR
-deployment.apps/oracleclinicalrdcsso-dev   2/2     2            2           193d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.298t1-SNAPSHOT   app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev
+Worked for 55s
 
-NAME                                                  DESIRED   CURRENT   READY   AGE    CONTAINERS   IMAGES                                                                                                                                         SELECTOR
-replicaset.apps/oracleclinicalrdcsso-dev-54dfb64468   0         0         0       181d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.294-SNAPSHOT     app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev,pod-template-hash=54dfb64468
-replicaset.apps/oracleclinicalrdcsso-dev-57f47458d9   2         2         2       144d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.298t1-SNAPSHOT   app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev,pod-template-hash=57f47458d9
-replicaset.apps/oracleclinicalrdcsso-dev-6b56d4df9d   0         0         0       193d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.3.28-SNAPSHOT      app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev,pod-template-hash=6b56d4df9d
-replicaset.apps/oracleclinicalrdcsso-dev-6b5d497754   0         0         0       144d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-releases-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.298t              app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev,pod-template-hash=6b5d497754
-replicaset.apps/oracleclinicalrdcsso-dev-6c85db7589   0         0         0       181d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.293-SNAPSHOT     app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev,pod-template-hash=6c85db7589
-replicaset.apps/oracleclinicalrdcsso-dev-6d5f5b65b9   0         0         0       186d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.272-SNAPSHOT     app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev,pod-template-hash=6d5f5b65b9
-replicaset.apps/oracleclinicalrdcsso-dev-799549b478   0         0         0       180d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.296t-SNAPSHOT    app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev,pod-template-hash=799549b478
-replicaset.apps/oracleclinicalrdcsso-dev-cbc5b6f8d    0         0         0       181d   argo-app     case.artifacts.medtronic.com/bcp_web-docker-snapshots-virtual/com/medtronic/web/app/bcp_web/clinical/oracleclinicalrdcsso:3.4.293-SNAPSHOT     app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web,com.medtronic.web/tracking=16Aug2021,kubernetes.io/metadata.name=oracleclinicalrdcsso-dev,pod-template-hash=cbc5b6f8d
+The output does not support a Secrets Provider failure. The Compass/Kubernetes components currently look healthy.
 
-NAME                                            READY   STATUS    RESTARTS   AGE    IP               NODE                            NOMINATED NODE   READINESS GATES
-pod/oracleclinicalrdcsso-dev-57f47458d9-cqlh9   1/1     Running   0          7d2h   100.64.108.179   ip-10-210-91-7.ec2.internal     <none>           <none>
-pod/oracleclinicalrdcsso-dev-57f47458d9-kz5nz   1/1     Running   0          47h    100.64.5.106     ip-10-210-90-236.ec2.internal   <none>           <none>
+Confirmed findings
 
-NAME                               TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)   AGE     SELECTOR
-service/oracleclinicalrdcsso-dev   ClusterIP   172.20.120.134   <none>        80/TCP    2y94d   app.kubernetes.io/instance=oracleclinicalrdcsso-dev,app.kubernetes.io/name=app-tomcat,com.medtronic.web/pod-type=web
+Component	Result
 
-NAME                                 ENDPOINTS                               AGE
-endpoints/oracleclinicalrdcsso-dev   100.64.108.179:8081,100.64.5.106:8081   2y94d
+Deployment	Healthy 2/2
+Pods	Both Running, 1/1, zero restarts
+Service	Has both pod endpoints on port 8081
+Ingress	Correctly maps edcmdt-test.medtronic.com
+DNS	Resolves to the configured internal ALB
+TLS	Valid certificate, correct SAN, expires March 19, 2027
+Root request	Expected HTTP 301 redirect to /oracleclinicalrdcsso/
+Flux	oracleclinicalrdcsso-dev is Ready=True
+Recent deployment change	None; active ReplicaSet was created May 7, 2026
+Secret mount events	None
+SecretProviderClass	None configured
+ExternalSecret	None configured
 
-NAME                                                            ADDRESSTYPE   PORTS   ENDPOINTS                     AGE
-endpointslice.discovery.k8s.io/oracleclinicalrdcsso-dev-fxjmr   IPv4          8081    100.64.108.179,100.64.5.106   2y94d
 
-NAME                                                  CLASS        HOSTS                                                                                       ADDRESS                                                                   PORTS   AGE
-ingress.networking.k8s.io/edcmdt-test.medtronic.com   alb-webdev   edcmdt-test.medtronic.com,edcmdt-test.medtronic.com,edcmdt-test.medtronic.com + 5 more...   internal-k8s-intnon003-128bf56b67-943687084.us-east-1.elb.amazonaws.com   80      369d
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" get events \
->   --sort-by=.metadata.creationTimestamp | tail -n 60
-No resources found in argo-oracleclinicalrdcsso-dev namespace.
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" get pods -o custom-columns='NAME:.metadata.name,READY:.status.containerStatuses[*].ready,RESTARTS:.status.containerStatuses[*].restartCount,STATUS:.status.phase,NODE:.spec.nodeName,IP:.status.podIP,STARTED:.status.startTime'
-NAME                                        READY   RESTARTS   STATUS    NODE                            IP               STARTED
-oracleclinicalrdcsso-dev-57f47458d9-cqlh9   true    0          Running   ip-10-210-91-7.ec2.internal     100.64.108.179   2026-09-21T14:13:07Z
-oracleclinicalrdcsso-dev-57f47458d9-kz5nz   true    0          Running   ip-10-210-90-236.ec2.internal   100.64.5.106     2026-09-26T16:22:33Z
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" get ingress -o custom-columns='NAME:.metadata.name,CLASS:.spec.ingressClassName,HOSTS:.spec.rules[*].host,ADDRESS:.status.loadBalancer.ingress[*].hostname'
-NAME                        CLASS        HOSTS                                                                                                                                                                                                             ADDRESS
-edcmdt-test.medtronic.com   alb-webdev   edcmdt-test.medtronic.com,edcmdt-test.medtronic.com,edcmdt-test.medtronic.com,edcmdt-test.medtronic.com,edcmdt-test.medtronic.com,edcmdt-test.medtronic.com,edcmdt-test.medtronic.com,edcmdt-test.medtronic.com   internal-k8s-intnon003-128bf56b67-943687084.us-east-1.elb.amazonaws.com
-AWSReservedSSO_DefaultDeveloperRole_f2bbe1d53a7b5622:~/environment $ $K -n "$NS" describe ingress
-Warning: v1 Endpoints is deprecated in v1.33+; use discovery.k8s.io/v1 EndpointSlice
-Name:             edcmdt-test.medtronic.com
-Labels:           app.kubernetes.io/instance=oracleclinicalrdcsso-dev
-                  app.kubernetes.io/managed-by=Helm
-                  app.kubernetes.io/name=argo-ingress
-                  app.kubernetes.io/version=v1
-                  helm.sh/chart=argo-ingress-1.7.7
-                  helm.toolkit.fluxcd.io/name=oracleclinicalrdcsso-dev-ingress
-                  helm.toolkit.fluxcd.io/namespace=argo-oracleclinicalrdcsso-dev
-Namespace:        argo-oracleclinicalrdcsso-dev
-Address:          internal-k8s-intnon003-128bf56b67-943687084.us-east-1.elb.amazonaws.com
-Default backend:  default-http-backend:80 (<error: endpoints "default-http-backend" not found>)
-Rules:
-  Host                       Path  Backends
-  ----                       ----  --------
+The resources named secrets, secrets-files, and secrets-providers are ordinary Kubernetes Opaque Secrets. The name secrets-providers does not mean that the Secrets Store CSI provider is being used.
+
+The application mounts secrets-files and secrets-providers directly, and Kubernetes mounted them successfully. Otherwise, the pods would normally be stuck in ContainerCreating with FailedMount events.
+
+Errors that are not the ticket’s likely cause
+
+The logs repeatedly show:
+
+obs-otel-agent-collector.observability.svc.cluster.local:
+Name does not resolve
+
+That is an OpenTelemetry/observability DNS or missing-Service problem. It can prevent trace export, but it normally does not stop the EDC application from serving requests. It should be investigated separately because it reduces observability during incidents.
+
+The following Ingress messages are also not automatically failures:
+
+redirect-to-context-root:use-annotation
+(<error: endpoints "redirect-to-context-root" not found>)
+
+redirect-to-context-root is an ALB annotation action, not a real Kubernetes Service, so it is expected not to have endpoints. The successful 301 confirms that the action works.
+
+What is still not proven
+
+The test only requested /, which was processed directly by the ALB redirect action. It has not yet proven that the ALB can successfully reach the application backend.
+
+Run:
+
+curl -sS \
+  -o /dev/null \
+  -D - \
+  --connect-timeout 10 \
+  --max-time 30 \
+  "https://edcmdt-test.medtronic.com/oracleclinicalrdcsso/"
+
+Test the exact ALB health-check URL:
+
+curl -sS \
+  -D - \
+  --connect-timeout 10 \
+  --max-time 30 \
+  "https://edcmdt-test.medtronic.com/oracleclinicalrdcsso/build.json?ALB"
+
+Expected result: HTTP 200 or, depending on application behavior, an expected 302. A 502 or 503 would change the investigation toward the target group or application backend.
+
+Check authentication-provider errors
+
+Because this application previously had an OIDC provider-definition issue, search specifically for authentication errors while excluding the OpenTelemetry noise:
+
+for pod in $($K -n "$NS" get pods -o name); do
+  echo "===== $pod ====="
+
+  $K -n "$NS" logs "$pod" \
+    --all-containers \
+    --since=24h \
+    --tail=3000 2>&1 |
+  grep -Ei 'oauth|oidc|auth0|provider|signin|login|authentication|ORA-|JDBC|SQL' |
+  grep -Ev 'obs-otel-agent-collector|OkHttpGrpcExporter' |
+  tail -n 150
+done
+
+Inspect only the Secret key names—not their values:
+
+for secret in secrets secrets-files secrets-providers; do
+  echo "===== $secret ====="
+
+  $K -n "$NS" get secret "$secret" -o json |
+  jq -r '.data | keys[]'
+done
+
+Inspect where those Secrets are mounted:
+
+$K -n "$NS" get deployment oracleclinicalrdcsso-dev -o json |
+jq '{
+  volumes: [.spec.template.spec.volumes[] | select(.secret)],
+  mounts: [.spec.template.spec.containers[].volumeMounts[]]
+}'
+
+Do not decode or publish any Secret values.
+
+Most important missing validation
+
+If both URLs work from Cloud9, then this is probably source-specific—not a general Compass outage. The checks must be executed from the reported application servers.
+
+From each affected Windows server:
+
+Resolve-DnsName edcmdt-test.medtronic.com
+
+Test-NetConnection edcmdt-test.medtronic.com -Port 443
+
+curl.exe -v `
+  --connect-timeout 10 `
+  "https://edcmdt-test.medtronic.com/oracleclinicalrdcsso/"
+
+The ticket must also confirm the server names. These two look suspicious:
+
+mspm7aappddd0136 — contains three consecutive d characters.
+
+mspm7appd0137 — differs from the naming pattern of the others.
+
+
+Current conclusion
+
+There is no evidence of a Compass deployment, Kubernetes Secret mount, DNS, certificate, Service, endpoint, or Flux failure. There was also no recent application rollout.
+
+The remaining likely areas are:
+
+1. Source-server connectivity or DNS.
+
+
+2. WAF blocking a request from the affected source IP.
+
+
+3. Authentication/OIDC behavior after reaching the application.
+
+
+4. Application-to-database connectivity.
+
+
+5. Incorrect server names or incomplete ticket information.
+
+
+
+Run the two application-path curl commands next. Those responses will establish whether traffic actually reaches the pods.
+
+
+
+
+
+
+
+
+-  --------
   edcmdt-test.medtronic.com  
                              /                       redirect-to-context-root:use-annotation (<error: endpoints "redirect-to-context-root" not found>)
                              /oracleclinicalrdcsso   oracleclinicalrdcsso-dev:80 (100.64.108.179:8081,100.64.5.106:8081)
