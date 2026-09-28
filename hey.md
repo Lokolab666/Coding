@@ -1,114 +1,80 @@
-Worked for 44s
 
-These results confirm that the application is reachable and serving traffic. The hypothesis of a Secrets Provider failure is now very weak.
-
-What is proven
-
-/oracleclinicalrdcsso/ reaches the application pods and returns HTTP 302.
-
-The response comes from Apache, not only the ALB.
-
-The redirect to login.html is expected for an unauthenticated request.
-
-The health endpoint returns HTTP 200.
-
-Application version 3.4.298t1-SNAPSHOT, environment DEV, is running.
-
-The signin-stage.medtronic.com provider has all three required files:
-
-.client
-
-.conf
-
-.provider
-
-
-Those files are projected into /var/cache/mod_auth_openidc/metadata.
-
-No OIDC, provider, authentication, Oracle, JDBC, or SQL errors were found in the last 24 hours.
-
-
-The secrets-providers resource is a normal Kubernetes Secret containing the mod_auth_openidc provider files. It is not a Secrets Store CSI provider.
-
-Important qualification
-
-The Windows test originated from:
-
-10.213.87.36
-
-If that IP belongs to one of the reported application servers, connectivity from that server is working. The same validation still needs to be executed from the other affected servers because the original ticket names three sources.
-
-The 302 is not a failure:
-
-Location: /oracleclinicalrdcsso/login.html
-
-It is the expected authentication entry point.
-
-Remaining possibilities
-
-The issue is now more likely to be:
-
-1. A specific server—not the one tested—cannot reach the endpoint.
-
-
-2. A browser/user-specific SSO problem after displaying login.html.
-
-
-3. An OIDC callback or token-exchange failure after selecting the login provider.
-
-
-4. A specific application transaction failing against MDTOPT.
-
-
-5. Incorrect server names in the ticket.
-
-
-6. The issue was temporary and is no longer reproducible.
-
-
-
-Next validation
-
-From each listed application server, run:
 
 hostname
-ipconfig | findstr /i "IPv4"
+CPC-mesac-4BM7S
+PS C:\Users\mesac2> ipconfig | findstr /i "IPv4"
+   IPv4 Address. . . . . . . . . . . : 10.213.87.36
+   IPv4 Address. . . . . . . . . . . : 192.168.176.1
+PS C:\Users\mesac2> Resolve-DnsName edcmdt-test.medtronic.com
 
-Resolve-DnsName edcmdt-test.medtronic.com
+Name                           Type   TTL   Section    NameHost
+----                           ----   ---   -------    --------
+edcmdt-test.medtronic.com      CNAME  900   Answer     internal-k8s-intnon003-128bf56b67-943687084.us-east-1.elb.amazon
+                                                       aws.com
 
-Test-NetConnection edcmdt-test.medtronic.com -Port 443
-
-curl.exe -v `
-  --connect-timeout 10 `
-  "https://edcmdt-test.medtronic.com/oracleclinicalrdcsso/"
-
-The requester must provide the actual symptom. “Not able to connect” is not enough. Ask for:
-
-Exact error message or screenshot.
-
-Timestamp and timezone.
-
-Which of the three servers fails.
-
-Whether the problem occurs before or after authentication.
-
-Full URL/path being accessed.
-
-Whether the health endpoint works from the affected server.
-
-Source IP of every affected server.
+Name       : internal-k8s-intnon003-128bf56b67-943687084.us-east-1.elb.amazonaws.com
+QueryType  : A
+TTL        : 60
+Section    : Answer
+IP4Address : 10.210.90.218
 
 
-Suggested ticket update
-
-> We validated edcmdt-test.medtronic.com in the Argo DEV environment. The Kubernetes deployment is healthy with two ready pods and no restarts. The Service has both expected endpoints, Flux reconciliation is healthy, DNS resolves to the configured internal ALB, and the TLS certificate is valid.
-
-The application health endpoint /oracleclinicalrdcsso/build.json?ALB returns HTTP 200 and identifies version 3.4.298t1-SNAPSHOT in DEV. The application context returns the expected HTTP 302 redirect to the authentication page.
-
-The OIDC provider files for signin-stage.medtronic.com are present and mounted correctly. No provider, authentication, Oracle, JDBC, or SQL errors were found in the reviewed application logs. No recent application deployment was identified.
-
-A connectivity test from source IP 10.213.87.36 successfully reached the application. Please confirm which listed server owns this IP and provide the exact error, timestamp, source server/IP, requested URL, and whether the failure occurs before or after authentication. The same connectivity test must be executed from each reportedly affected server.
+Name       : internal-k8s-intnon003-128bf56b67-943687084.us-east-1.elb.amazonaws.com
+QueryType  : A                                                                                                          TTL        : 60                                                                                                         Section    : Answer                                                                                                     IP4Address : 10.210.91.38                                                                                                                                                                                                                                                                                                                                               Name       : internal-k8s-intnon003-128bf56b67-943687084.us-east-1.elb.amazonaws.com                                    QueryType  : A                                                                                                          TTL        : 60                                                                                                         Section    : Answer                                                                                                     IP4Address : 10.210.91.111                                                                                                                                                                                                                                                                                                                                              Name                   : us-east-1.elb.amazonaws.com                                                                    QueryType              : SOA                                                                                            TTL                    : 60                                                                                             Section                : Authority                                                                                      NameAdministrator      : awsdns-hostmaster.amazon.com
+SerialNumber           : 1
+TimeToZoneRefresh      : 7200
+TimeToZoneFailureRetry : 900
+TimeToExpiration       : 1209600
+DefaultTTL             : 60
 
 
 
-Do not state that Compass caused the incident. The available evidence currently shows a healthy platform and application endpoint.
+PS C:\Users\mesac2> Test-NetConnection edcmdt-test.medtronic.com -Port 443
+
+
+ComputerName     : edcmdt-test.medtronic.com
+RemoteAddress    : 10.210.91.38
+RemotePort       : 443
+InterfaceAlias   : Ethernet
+SourceAddress    : 10.213.87.36
+TcpTestSucceeded : True
+
+
+
+PS C:\Users\mesac2> curl.exe -v `
+>>   --connect-timeout 10 `
+>>   "https://edcmdt-test.medtronic.com/oracleclinicalrdcsso/"
+* Host edcmdt-test.medtronic.com:443 was resolved.
+* IPv6: (none)
+* IPv4: 10.210.91.38, 10.210.91.111, 10.210.90.218
+*   Trying 10.210.91.38:443...
+* schannel: disabled automatic use of client certificate
+* ALPN: curl offers http/1.1
+* ALPN: server accepted http/1.1
+* Established connection to edcmdt-test.medtronic.com (10.210.91.38 port 443) from 10.213.87.36 port 64148
+* using HTTP/1.x
+> GET /oracleclinicalrdcsso/ HTTP/1.1
+> Host: edcmdt-test.medtronic.com
+> User-Agent: curl/8.21.0
+> Accept: */*
+>
+* Request completely sent off
+< HTTP/1.1 302 Found
+< Date: Mon, 28 Sep 2026 17:09:34 GMT
+< Content-Type: text/html; charset=iso-8859-1
+< Content-Length: 584
+< Connection: keep-alive
+< Server: Apache
+< Set-Cookie: x_csrf=oF-9TtErk7c; Path=/; Secure; HttpOnly; SameSite=Strict
+< Location: https://edcmdt-test.medtronic.com/oracleclinicalrdcsso/login.html?target_link_uri=https%3A%2F%2Fedcmdt-test.medtronic.com%3A443%2Foracleclinicalrdcsso%2F&method=get&oidc_callback=https%3A%2F%2Fedcmdt-test.medtronic.com%2Foracleclinicalrdcsso%2Fredirect&x_csrf=oF-9TtErk7c
+<
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+<title>302 Found</title>
+</head><body>
+<h1>Found</h1>
+<p>The document has moved <a href="https://edcmdt-test.medtronic.com/oracleclinicalrdcsso/login.html?target_link_uri=https%3A%2F%2Fedcmdt-test.medtronic.com%3A443%2Foracleclinicalrdcsso%2F&amp;method=get&amp;oidc_callback=https%3A%2F%2Fedcmdt-test.medtronic.com%2Foracleclinicalrdcsso%2Fredirect&amp;x_csrf=oF-9TtErk7c">here</a>.</p>
+<hr>
+<address>Apache Server at edcmdt-test.medtronic.com Port 8081</address>
+</body></html>
+* Connection #0 to host edcmdt-test.medtronic.com:443 left intact
