@@ -1,116 +1,176 @@
-     
-       kubectl -n "$NS" get pod "$POD"   -o jsonpath='{.metadata.ownerReferences[0].kind}{" "}{.metadata.ownerReferences[0].name}{"\n"}'
-DaemonSet envoy-oee-gateway
-mesac2@CPC-mesac-4BM7S:~$ DS=$(kubectl -n "$NS" get pod "$POD" \
-  -o jsonpath='{.metadata.ownerReferences[0].name}')
-mesac2@CPC-mesac-4BM7S:~$ kubectl -n "$NS" get ds "$DS" -o json |
+Worked for 46s
+
+Revisé el archivo. Aún no recomiendo eliminar ningún pod. Los resultados confirman la saturación por requests, pero falta validar el estado actual de Envoy antes de ejecutar una acción disruptiva.
+
+Hallazgos
+
+1. El DaemonSet de Envoy solicita exactamente 100Mi:
+
+shutdown-manager: 50Mi
+
+envoy: 50Mi
+
+
+
+2. El template no tiene:
+
+nodeSelector
+
+affinity
+
+tolerations
+
+priorityClassName
+
+
+Por tanto, la NodeAffinity observada en el pod no viene de una configuración incorrecta del chart; Kubernetes la genera para asociar cada pod del DaemonSet con su nodo. 
+
+
+3. El nodo tiene una concentración considerable de bases de datos:
+
+ami-mde: 4Gi
+
+livelink-db-01: 12Gi
+
+site-custom: 2Gi
+
+timescaledb: 4Gi
+
+
+Total de PostgreSQL solicitado: 22Gi.
+
+También está livelink-hivemq-3 con 2Gi.
+
+
+4. No existen PDB para:
+
+CloudNativePG
+
+HiveMQ
+
+Confluent Operator
+
+Envoy OEE Gateway
+
+
+Esto es un riesgo serio. Borrar una réplica de PostgreSQL o HiveMQ no cuenta con protección declarativa contra una interrupción de disponibilidad.
+
+
+5. kubectl top node falló porque Metrics Server no tiene un objeto de métricas para ese nodo. Eso no significa necesariamente que el nodo no exista.
+
+
+6. Hay una inconsistencia importante: envoy-oee-gateway-67t2p aparece con spec.nodeName asignado al nodo. Esto podría significar que ya pasó scheduling y ahora está bloqueado en otra fase. El evento anterior de Insufficient memory puede ser histórico.
+
+
+
+Próxima validación obligatoria
+
+Ejecuta esto antes de mover cualquier workload:
+
+kubectl get node "$NODE" -o wide
+
+kubectl -n "$NS" get pod "$POD" -o json |
 jq '{
-  nodeSelector: .spec.template.spec.nodeSelector,
-  affinity: .spec.template.spec.affinity,
-  tolerations: .spec.template.spec.tolerations,
-  priorityClassName: .spec.template.spec.priorityClassName,
-  requests: [.spec.template.spec.containers[] |
-    {name: .name, requests: .resources.requests}]
+  phase: .status.phase,
+  node: .spec.nodeName,
+  conditions: .status.conditions,
+  initContainers: .status.initContainerStatuses,
+  containers: .status.containerStatuses
 }'
-{
-  "nodeSelector": null,
-  "affinity": null,
-  "tolerations": null,
-  "priorityClassName": null,
-  "requests": [
-    {
-      "name": "shutdown-manager",
-      "requests": {
-        "cpu": "25m",
-        "memory": "50Mi"
-      }
-    },
-    {
-      "name": "envoy",
-      "requests": {
-        "cpu": "25m",
-        "memory": "50Mi"
-      }
-    }
-  ]
-}
+
+kubectl -n "$NS" describe pod "$POD"
+
+kubectl -n "$NS" get ds "$DS" -o wide
+
+También revisa los eventos recientes:
+
+kubectl get events -A \
+  --sort-by=.metadata.creationTimestamp |
+tail -n 100
+
+Esto determinará si el problema actual es:
+
+FailedScheduling
+
+ContainerCreating
+
+Montaje de volúmenes
+
+Image pull
+
+Dynatrace injection
+
+CNI/network
+
+Otro fallo posterior al scheduling
 
 
- kubectl get pods -A --field-selector spec.nodeName="$NODE" -o json |
-jq -r '.items[] | [
-  .metadata.namespace,
-  .metadata.name,
-  (.metadata.ownerReferences[0].kind // "-"),
-  (.metadata.ownerReferences[0].name // "-"),
-  (.spec.priority // 0),
-  ([.spec.containers[].resources.requests.memory // "0"] | join("+"))
-] | @tsv' | column -t
-ami-mde-db          ami-mde-db-mde-prd-cluster-1                                            Cluster      ami-mde-db-mde-prd-cluster                  20500       2Gi
-ami-mde-db          ami-mde-db-mde-prd-cluster-2                                            Cluster      ami-mde-db-mde-prd-cluster                  20500       2Gi
-atlas-system        kubescape-node-agent-wvcjj                                              DaemonSet    kubescape-node-agent                        100000100   180Mi
-cert-manager        cert-manager-65bb4b7446-4hk68                                           ReplicaSet   cert-manager-65bb4b7446                     1010000     200Mi
-cert-manager        cert-manager-65bb4b7446-vfqzg                                           ReplicaSet   cert-manager-65bb4b7446                     1010000     200Mi
-cert-manager        cert-manager-cainjector-5877b687dc-4rsms                                ReplicaSet   cert-manager-cainjector-5877b687dc          1010000     64Mi
-cert-manager        cert-manager-cainjector-5877b687dc-g8bgx                                ReplicaSet   cert-manager-cainjector-5877b687dc          1010000     64Mi
-cert-manager        cert-manager-webhook-5c564bbfcd-2vwnh                                   ReplicaSet   cert-manager-webhook-5c564bbfcd             1010000     32Mi
-cert-manager        cert-manager-webhook-5c564bbfcd-6tkjx                                   ReplicaSet   cert-manager-webhook-5c564bbfcd             1010000     32Mi
-cert-manager        cert-manager-webhook-5c564bbfcd-sv9hh                                   ReplicaSet   cert-manager-webhook-5c564bbfcd             1010000     32Mi
-cnpg-system         cloudnative-pg-75d7696cb5-rvpr2                                         ReplicaSet   cloudnative-pg-75d7696cb5                   1000000     256Mi
-cnpg-system         cloudnative-pg-75d7696cb5-wlz8k                                         ReplicaSet   cloudnative-pg-75d7696cb5                   1000000     256Mi
-confluent-system    confluent-operator-77f55d5978-drtbv                                     ReplicaSet   confluent-operator-77f55d5978               1000000     256Mi
-confluent-system    confluent-operator-77f55d5978-rqxrj                                     ReplicaSet   confluent-operator-77f55d5978               1000000     256Mi
-confluent-system    confluent-operator-77f55d5978-tlvhk                                     ReplicaSet   confluent-operator-77f55d5978               1000000     256Mi
-contour-system      contour-contour-88c7c6c9b-qrcnl                                         ReplicaSet   contour-contour-88c7c6c9b                   1005000     128Mi
-contour-system      contour-envoy-l5xbs                                                     DaemonSet    contour-envoy                               1005000     128Mi+128Mi
-contour-system      contour-gateway-provisioner-68d5bd54dc-4flnv                            ReplicaSet   contour-gateway-provisioner-68d5bd54dc      0           128Mi
-dynatrace-operator  dynatrace-fluent-bit-h4bnb                                              DaemonSet    dynatrace-fluent-bit                        1000000     128Mi
-dynatrace-operator  dynatrace-oneagent-csi-driver-477zn                                     DaemonSet    dynatrace-oneagent-csi-driver               1000000     100Mi+100Mi+30Mi+30Mi
-gpu-operator        gpu-operator-node-feature-discovery-worker-prrfl                        DaemonSet    gpu-operator-node-feature-discovery-worker  2000001000  64Mi
-kube-system         antrea-agent-9zpqt                                                      DaemonSet    antrea-agent                                2000001000  0
-kube-system         kube-proxy-zh44f                                                        DaemonSet    kube-proxy                                  2000001000  0
-kube-system         node-debugger-adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6-6gnm9  -            -                                           0           0
-kube-system         node-debugger-adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6-vwl9c  -            -                                           0           0
-livelink-db         livelink-db-01-cluster-1                                                Cluster      livelink-db-01-cluster                      20500       6Gi
-livelink-db         livelink-db-01-cluster-3                                                Cluster      livelink-db-01-cluster                      20500       6Gi
-livelink-db         livelink-db-site-custom-cluster-1                                       Cluster      livelink-db-site-custom-cluster             20500       2Gi
-livelink-db         livelink-db-timescaledb-cluster-1                                       Cluster      livelink-db-timescaledb-cluster             20500       4Gi
-livelink-hivemq     livelink-hivemq-3                                                       StatefulSet  livelink-hivemq                             0           2Gi
-livelink-system     envoy-oee-gateway-67t2p                                                 DaemonSet    envoy-oee-gateway                           0           50Mi+50Mi
-vmware-system-csi   vsphere-csi-node-77xgr                                                  DaemonSet    vsphere-csi-node                            2000001000  0
-mesac2@CPC-mesac-4BM7S:~$ kubectl top node "$NODE"
-Error from server (NotFound): nodemetrics.metrics.k8s.io "adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6" not found
-mesac2@CPC-mesac-4BM7S:~$ kubectl top pods -A --containers --sort-by=memory
-NAMESPACE                      POD                                                          NAME
-             CPU(cores)   MEMORY(bytes)
-livelink-ignition              livelink-ignition-gateway-0                                  gateway
-             393m         5152Mi
-livelink-ignition              livelink-ignition-gateway-0                                  ldap-seeder                    0m           0Mi
-kube-system                    kube-apiserver-adan1-atlas-prd-r7ftq-whtgs                   kube-apiserver                 61m          3036Mi
-kube-system                    kube-apiserver-adan1-atlas-prd-r7ftq-gtxjx                   kube-apiserver                 70m          2927Mi
-kube-system                    kube-apiserver-adan1-atlas-prd-r7ftq-fqdq2                   kube-apiserver                 63m          2727Mi
-gpu-operator                   nvidia-driver-daemonset-5p5k2                                nvidia-driver-ctr              0m           1812Mi
-gpu-operator                   nvidia-driver-daemonset-5lksh                                nvidia-driver-ctr              0m           1807Mi
-gpu-operator                   nvidia-driver-daemonset-lmwp2                                nvidia-driver-ctr              0m           1806Mi
-dynatrace-operator             adan1-atlas-prd-activegate-0                                 activegate                     31m          1389Mi
-livelink-hivemq                livelink-hivemq-2                                            hivemq
-             16m          1183Mi
-livelink-hivemq                livelink-hivemq-0                                            hivemq
-             14m          1183Mi
-livelink-hivemq                livelink-hivemq-1                                            hivemq
-             16m          1172Mi
-hivemq-operator                hivemq-hivemq-operator-6b4fdb876b-5vlgt                      hivemq-platform-operator       2m           600Mi
-gpu-operator                   nvidia-dcgm-exporter-hz6lw                                   nvidia-dcgm-exporter           5m           424Mi
-gpu-operator                   nvidia-dcgm-exporter-7twr8                                   nvidia-dcgm-exporter           4m           422Mi
-gpu-operator                   nvidia-dcgm-exporter-wxrdh                                   nvidia-dcgm-exporter           6m           421Mi
-livelink-db                    livelink-db-01-cluster-2                                     postgres
-             198m         326Mi
-atlas-system                   kubescape-node-agent-b6ljm                                   kubescape-node-agent           3m           258Mi
-livelink-db                    livelink-db-platform-cluster-1                               postgres
-             6m           244Mi
-livelink-db                    livelink-db-platform-cluster-2                               postgres
-             6m           240Mi
-atlas-system                   kubescape-node-agent-bc9px                                   kubescape-node-agent           3m           216Mi
-atlas-system                   kubescape-node-agent-98m9w                                   kubescape-node-agent           2m           209Mi
+Validación de HiveMQ
+
+livelink-hivemq-3 parece el único workload de aplicación con suficiente request para liberar memoria, pero es un StatefulSet, no un pod stateless. No debe eliminarse sin confirmar su estado y arquitectura:
+
+kubectl -n livelink-hivemq get sts,pods -o wide
+
+kubectl -n livelink-hivemq get sts livelink-hivemq -o json |
+jq '{
+  replicas: .spec.replicas,
+  readyReplicas: .status.readyReplicas,
+  currentReplicas: .status.currentReplicas,
+  podManagementPolicy: .spec.podManagementPolicy,
+  updateStrategy: .spec.updateStrategy,
+  affinity: .spec.template.spec.affinity,
+  topologySpreadConstraints: .spec.template.spec.topologySpreadConstraints
+}'
+
+kubectl -n livelink-hivemq describe pod livelink-hivemq-3
+
+No sabemos todavía por qué livelink-hivemq-3 no aparece en kubectl top. Podría estar iniciando, no tener métricas o encontrarse en un estado anormal.
+
+Decisión recomendada
+
+No ejecutes todavía:
+
+kubectl delete pod ...
+kubectl cordon ...
+
+Tampoco elimines una instancia CloudNativePG. Las dos opciones pueden trasladar el problema a HiveMQ o a una base de datos y no garantizan que el pod recreado termine en otro nodo.
+
+El orden correcto es:
+
+1. Confirmar el estado actual de Envoy.
+
+
+2. Confirmar el estado de livelink-hivemq-3.
+
+
+3. Verificar capacidad por requests en los otros worker nodes.
+
+
+4. Si Envoy continúa en FailedScheduling, solicitar expansión del worker pool.
+
+
+5. Solo como mitigación urgente, coordinar con el propietario de HiveMQ o DBA una reubicación controlada.
+
+
+
+Con la evidencia actual, la solución más segura sigue siendo aumentar capacidad. Mover una base de datos para liberar únicamente 88Mi sería una intervención desproporcionada y arriesgada.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+tem                   kubescape-node-agent-98m9w                                   kubescape-node-agent           2m           209Mi
 atlas-system                   kubescape-node-agent-gw4jn                                   kubescape-node-agent           2m           208Mi
 livelink-db                    livelink-db-timescaledb-cluster-3                            postgres
              4m           206Mi
