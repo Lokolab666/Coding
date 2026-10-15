@@ -1,75 +1,16 @@
-Worked for 46s
-
-Revisé el archivo. Aún no recomiendo eliminar ningún pod. Los resultados confirman la saturación por requests, pero falta validar el estado actual de Envoy antes de ejecutar una acción disruptiva.
-
-Hallazgos
-
-1. El DaemonSet de Envoy solicita exactamente 100Mi:
-
-shutdown-manager: 50Mi
-
-envoy: 50Mi
-
-
-
-2. El template no tiene:
-
-nodeSelector
-
-affinity
-
-tolerations
-
-priorityClassName
-
-
-Por tanto, la NodeAffinity observada en el pod no viene de una configuración incorrecta del chart; Kubernetes la genera para asociar cada pod del DaemonSet con su nodo. 
-
-
-3. El nodo tiene una concentración considerable de bases de datos:
-
-ami-mde: 4Gi
-
-livelink-db-01: 12Gi
-
-site-custom: 2Gi
-
-timescaledb: 4Gi
-
-
-Total de PostgreSQL solicitado: 22Gi.
-
-También está livelink-hivemq-3 con 2Gi.
-
-
-4. No existen PDB para:
-
-CloudNativePG
-
-HiveMQ
-
-Confluent Operator
-
-Envoy OEE Gateway
-
-
-Esto es un riesgo serio. Borrar una réplica de PostgreSQL o HiveMQ no cuenta con protección declarativa contra una interrupción de disponibilidad.
-
-
-5. kubectl top node falló porque Metrics Server no tiene un objeto de métricas para ese nodo. Eso no significa necesariamente que el nodo no exista.
-
-
-6. Hay una inconsistencia importante: envoy-oee-gateway-67t2p aparece con spec.nodeName asignado al nodo. Esto podría significar que ya pasó scheduling y ahora está bloqueado en otra fase. El evento anterior de Insufficient memory puede ser histórico.
-
-
-
-Próxima validación obligatoria
-
-Ejecuta esto antes de mover cualquier workload:
-
-kubectl get node "$NODE" -o wide
-
-kubectl -n "$NS" get pod "$POD" -o json |
+ kubectl get node "$NODE" -o wide
+NAME                                                 STATUS   ROLES    AGE   VERSION            INTERNAL-IP   EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION       CONTAINER-RUNTIME
+adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6   Ready    <none>   5d    v1.34.1+vmware.1   172.19.0.62   <none>        Ubuntu 22.04.5 LTS   5.15.0-160-generic   containerd://2.1.4+vmware.3-fips
+mesac2@CPC-mesac-4BM7S:~$ kubectl describe node adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6 | egrep "Allocatable:|memory"
+  MemoryPressure           False   Thu, 15 Oct 2026 16:34:55 +0000   Thu, 15 Oct 2026 06:37:05 +0000   KubeletHasSufficientMemory   kubelet has sufficient memory available
+  memory:             32862028Ki
+Allocatable:
+  memory:             29069132Ki
+  memory             27724Mi (97%)  37032Mi (130%)
+mesac2@CPC-mesac-4BM7S:~$ kubectl get node "$NODE" -o wide
+NAME                                                 STATUS   ROLES    AGE   VERSION            INTERNAL-IP   EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION       CONTAINER-RUNTIME
+adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6   Ready    <none>   5d    v1.34.1+vmware.1   172.19.0.62   <none>        Ubuntu 22.04.5 LTS   5.15.0-160-generic   containerd://2.1.4+vmware.3-fips
+mesac2@CPC-mesac-4BM7S:~$ kubectl -n "$NS" get pod "$POD" -o json |
 jq '{
   phase: .status.phase,
   node: .spec.nodeName,
@@ -77,41 +18,611 @@ jq '{
   initContainers: .status.initContainerStatuses,
   containers: .status.containerStatuses
 }'
-
-kubectl -n "$NS" describe pod "$POD"
-
-kubectl -n "$NS" get ds "$DS" -o wide
-
-También revisa los eventos recientes:
-
-kubectl get events -A \
+{
+  "phase": "Pending",
+  "node": "adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6",
+  "conditions": [
+    {
+      "lastProbeTime": null,
+      "lastTransitionTime": "2026-10-15T14:30:07Z",
+      "observedGeneration": 2,
+      "status": "False",
+      "type": "PodReadyToStartContainers"
+    },
+    {
+      "lastProbeTime": null,
+      "lastTransitionTime": "2026-10-15T08:32:19Z",
+      "message": "containers with incomplete status: [envoy-initconfig dynatrace-operator]",
+      "observedGeneration": 2,
+      "reason": "ContainersNotInitialized",
+      "status": "False",
+      "type": "Initialized"
+    },
+    {
+      "lastProbeTime": null,
+      "lastTransitionTime": "2026-10-15T08:32:19Z",
+      "message": "containers with unready status: [shutdown-manager envoy]",
+      "observedGeneration": 2,
+      "reason": "ContainersNotReady",
+      "status": "False",
+      "type": "Ready"
+    },
+    {
+      "lastProbeTime": null,
+      "lastTransitionTime": "2026-10-15T08:32:19Z",
+      "message": "containers with unready status: [shutdown-manager envoy]",
+      "observedGeneration": 2,
+      "reason": "ContainersNotReady",
+      "status": "False",
+      "type": "ContainersReady"
+    },
+    {
+      "lastProbeTime": null,
+      "lastTransitionTime": "2026-10-15T08:30:08Z",
+      "observedGeneration": 2,
+      "status": "True",
+      "type": "PodScheduled"
+    }
+  ],
+  "initContainers": [
+    {
+      "allocatedResources": {
+        "cpu": "25m",
+        "memory": "50Mi"
+      },
+      "containerID": "containerd://37988fbb95f8a1053e3364c5a68e38120bd3e8540f91856224dd1d3d5bef6447",
+      "image": "case.artifacts.medtronic.com/ext-docker-hub-remote/bitnamilegacy/contour:1.32.1-debian-12-r0",
+      "imageID": "case.artifacts.medtronic.com/ext-docker-hub-remote/bitnamilegacy/contour@sha256:ab0665888c91c754030d46e7bbaf9a661bd1f16bbbbafcef59ce0fafdba871f1",
+      "lastState": {},
+      "name": "envoy-initconfig",
+      "ready": false,
+      "resources": {
+        "limits": {
+          "cpu": "50m",
+          "memory": "100Mi"
+        },
+        "requests": {
+          "cpu": "25m",
+          "memory": "50Mi"
+        }
+      },
+      "restartCount": 0,
+      "started": false,
+      "state": {
+        "terminated": {
+          "containerID": "containerd://37988fbb95f8a1053e3364c5a68e38120bd3e8540f91856224dd1d3d5bef6447",
+          "exitCode": 2,
+          "finishedAt": "2026-10-15T14:26:50Z",
+          "reason": "Error",
+          "startedAt": "2026-10-15T14:25:16Z"
+        }
+      },
+      "user": {
+        "linux": {
+          "gid": 65534,
+          "supplementalGroups": [
+            65534
+          ],
+          "uid": 65534
+        }
+      },
+      "volumeMounts": [
+        {
+          "mountPath": "/certs",
+          "name": "envoycert",
+          "readOnly": true,
+          "recursiveReadOnly": "Disabled"
+        },
+        {
+          "mountPath": "/config",
+          "name": "envoy-config"
+        }
+      ]
+    },
+    {
+      "image": "case.artifacts.medtronic.com/ext-docker-aws-remote/dynatrace/dynatrace-operator:v1.9.0",
+      "imageID": "",
+      "lastState": {},
+      "name": "dynatrace-operator",
+      "ready": false,
+      "restartCount": 0,
+      "started": false,
+      "state": {
+        "waiting": {
+          "reason": "PodInitializing"
+        }
+      },
+      "volumeMounts": [
+        {
+          "mountPath": "/mnt/bin",
+          "name": "oneagent-bin",
+          "readOnly": true,
+          "recursiveReadOnly": "Disabled"
+        },
+        {
+          "mountPath": "/mnt/config",
+          "name": "dynatrace-config"
+        },
+        {
+          "mountPath": "/mnt/input",
+          "name": "dynatrace-input",
+          "readOnly": true,
+          "recursiveReadOnly": "Disabled"
+        }
+      ]
+    }
+  ],
+  "containers": [
+    {
+      "image": "case.artifacts.medtronic.com/ext-docker-hub-remote/bitnamilegacy/envoy:1.34.5-debian-12-r0",
+      "imageID": "",
+      "lastState": {},
+      "name": "envoy",
+      "ready": false,
+      "restartCount": 0,
+      "started": false,
+      "state": {
+        "waiting": {
+          "reason": "PodInitializing"
+        }
+      },
+      "volumeMounts": [
+        {
+          "mountPath": "/certs",
+          "name": "envoycert",
+          "readOnly": true,
+          "recursiveReadOnly": "Disabled"
+        },
+        {
+          "mountPath": "/config",
+          "name": "envoy-config",
+          "readOnly": true,
+          "recursiveReadOnly": "Disabled"
+        },
+        {
+          "mountPath": "/admin",
+          "name": "envoy-admin"
+        },
+        {
+          "mountPath": "/opt/dynatrace/oneagent-paas",
+          "name": "oneagent-bin",
+          "readOnly": true,
+          "recursiveReadOnly": "Disabled"
+        },
+        {
+          "mountPath": "/etc/ld.so.preload",
+          "name": "dynatrace-config"
+        },
+        {
+          "mountPath": "/var/lib/dynatrace",
+          "name": "dynatrace-config"
+        }
+      ]
+    },
+    {
+      "image": "case.artifacts.medtronic.com/ext-docker-hub-remote/bitnamilegacy/contour:1.32.1-debian-12-r0",
+      "imageID": "",
+      "lastState": {},
+      "name": "shutdown-manager",
+      "ready": false,
+      "restartCount": 0,
+      "started": false,
+      "state": {
+        "waiting": {
+          "reason": "PodInitializing"
+        }
+      },
+      "volumeMounts": [
+        {
+          "mountPath": "/admin",
+          "name": "envoy-admin"
+        },
+        {
+          "mountPath": "/opt/dynatrace/oneagent-paas",
+          "name": "oneagent-bin",
+          "readOnly": true,
+          "recursiveReadOnly": "Disabled"
+        },
+        {
+          "mountPath": "/etc/ld.so.preload",
+          "name": "dynatrace-config"
+        },
+        {
+          "mountPath": "/var/lib/dynatrace",
+          "name": "dynatrace-config"
+        }
+      ]
+    }
+  ]
+}
+mesac2@CPC-mesac-4BM7S:~$ kubectl -n "$NS" describe pod "$POD"
+Name:                      envoy-oee-gateway-67t2p
+Namespace:                 livelink-system
+Priority:                  0
+Service Account:           envoy-oee-gateway
+Node:                      adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6/172.19.0.62
+Start Time:                Thu, 15 Oct 2026 08:32:19 +0000
+Labels:                    app=envoy-oee-gateway
+                           app.kubernetes.io/component=ingress-controller
+                           app.kubernetes.io/instance=oee-gateway
+                           app.kubernetes.io/managed-by=contour-gateway-provisioner
+                           app.kubernetes.io/name=contour
+                           controller-revision-hash=79d99f94f8
+                           gateway.networking.k8s.io/gateway-name=oee-gateway
+                           pod-template-generation=1
+                           projectcontour.io/owning-gateway-name=oee-gateway
+Annotations:               dynakube.dynatrace.com/injected: true
+                           metadata-enrichment.dynatrace.com/injected: true
+                           metadata.dynatrace.com: {}
+                           metadata.dynatrace.com/k8s.workload.kind: daemonset
+                           metadata.dynatrace.com/k8s.workload.name: envoy-oee-gateway
+                           oneagent.dynatrace.com/injected: true
+Status:                    Terminating (lasts 125m)
+Termination Grace Period:  300s
+IP:                        100.64.18.67
+IPs:
+  IP:           100.64.18.67
+Controlled By:  DaemonSet/envoy-oee-gateway
+Init Containers:
+  envoy-initconfig:
+    Container ID:  containerd://37988fbb95f8a1053e3364c5a68e38120bd3e8540f91856224dd1d3d5bef6447
+    Image:         case.artifacts.medtronic.com/ext-docker-hub-remote/bitnamilegacy/contour:1.32.1-debian-12-r0
+    Image ID:      case.artifacts.medtronic.com/ext-docker-hub-remote/bitnamilegacy/contour@sha256:ab0665888c91c754030d46e7bbaf9a661bd1f16bbbbafcef59ce0fafdba871f1
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      contour
+    Args:
+      bootstrap
+      /config/envoy.json
+      --xds-address=contour-oee-gateway
+      --xds-port=8001
+      --xds-resource-version=v3
+      --resources-dir=/config/resources
+      --envoy-cafile=/certs/ca.crt
+      --envoy-cert-file=/certs/tls.crt
+      --envoy-key-file=/certs/tls.key
+      --overload-max-heap=0
+      --overload-downstream-max-conn=0
+    State:          Terminated
+      Reason:       Error
+      Exit Code:    2
+      Started:      Thu, 15 Oct 2026 14:25:16 +0000
+      Finished:     Thu, 15 Oct 2026 14:26:50 +0000
+    Ready:          False
+    Restart Count:  0
+    Limits:
+      cpu:     50m
+      memory:  100Mi
+    Requests:
+      cpu:     25m
+      memory:  50Mi
+    Environment:
+      CONTOUR_NAMESPACE:  livelink-system (v1:metadata.namespace)
+    Mounts:
+      /certs from envoycert (ro)
+      /config from envoy-config (rw)
+  dynatrace-operator:
+    Container ID:
+    Image:           case.artifacts.medtronic.com/ext-docker-aws-remote/dynatrace/dynatrace-operator:v1.9.0
+    Image ID:
+    Port:            <none>
+    Host Port:       <none>
+    SeccompProfile:  RuntimeDefault
+    Args:
+      bootstrap
+      --config-directory=/mnt/config
+      --input-directory=/mnt/input
+      --suppress-error
+      --source=/opt/dynatrace/oneagent
+      --target=/mnt/bin
+      --install-path=/opt/dynatrace/oneagent-paas
+      --attribute=k8s.workload.kind=daemonset
+      --attribute=k8s.workload.name=envoy-oee-gateway
+      --attribute=dt.kubernetes.workload.kind=daemonset
+      --attribute=dt.kubernetes.workload.name=envoy-oee-gateway
+      --metadata-enrichment
+      --attribute-container={"container_image.registry":"case.artifacts.medtronic.com","container_image.repository":"ext-docker-hub-remote/bitnamilegacy/contour","container_image.tags":"1.32.1-debian-12-r0","k8s.container.name":"shutdown-manager"}
+      --attribute-container={"container_image.registry":"case.artifacts.medtronic.com","container_image.repository":"ext-docker-hub-remote/bitnamilegacy/envoy","container_image.tags":"1.34.5-debian-12-r0","k8s.container.name":"envoy"}
+      --attribute=k8s.namespace.name=livelink-system
+      --attribute=k8s.cluster.uid=728fa293-1692-4ed9-a786-b99e6b27650e
+      --attribute=k8s.cluster.name=adan1-atlas-prd
+      --attribute=dt.entity.kubernetes_cluster=KUBERNETES_CLUSTER-1EFC92E539F95C3C
+      --attribute=k8s.pod.name=$(K8S_PODNAME)
+      --attribute=k8s.pod.uid=$(K8S_PODUID)
+      --attribute=k8s.node.name=$(K8S_NODE_NAME)
+      --attribute=dt.kubernetes.cluster.id=728fa293-1692-4ed9-a786-b99e6b27650e
+    State:          Waiting
+      Reason:       PodInitializing
+    Ready:          False
+    Restart Count:  0
+    Limits:
+      cpu:     100m
+      memory:  60Mi
+    Requests:
+      cpu:     30m
+      memory:  30Mi
+    Environment:
+      K8S_PODNAME:    envoy-oee-gateway-67t2p (v1:metadata.name)
+      K8S_PODUID:      (v1:metadata.uid)
+      K8S_NODE_NAME:   (v1:spec.nodeName)
+    Mounts:
+      /mnt/bin from oneagent-bin (ro)
+      /mnt/config from dynatrace-config (rw)
+      /mnt/input from dynatrace-input (ro)
+Containers:
+  shutdown-manager:
+    Container ID:
+    Image:         case.artifacts.medtronic.com/ext-docker-hub-remote/bitnamilegacy/contour:1.32.1-debian-12-r0
+    Image ID:
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /bin/contour
+    Args:
+      envoy
+      shutdown-manager
+    State:          Waiting
+      Reason:       PodInitializing
+    Ready:          False
+    Restart Count:  0
+    Limits:
+      cpu:     50m
+      memory:  100Mi
+    Requests:
+      cpu:     25m
+      memory:  50Mi
+    Environment:
+      DT_DEPLOYMENT_METADATA:  orchestration_tech=Operator-application_monitoring;script_version=v1.9.0;orchestrator_id=728fa293-1692-4ed9-a786-b99e6b27650e
+      LD_PRELOAD:              /opt/dynatrace/oneagent-paas/agent/lib64/liboneagentproc.so
+      DT_STORAGE:              /var/lib/dynatrace/oneagent
+    Mounts:
+      /admin from envoy-admin (rw)
+      /etc/ld.so.preload from dynatrace-config (rw,path="oneagent/ld.so.preload")
+      /opt/dynatrace/oneagent-paas from oneagent-bin (ro)
+      /var/lib/dynatrace from dynatrace-config (rw,path="shutdown-manager")
+  envoy:
+    Container ID:
+    Image:         case.artifacts.medtronic.com/ext-docker-hub-remote/bitnamilegacy/envoy:1.34.5-debian-12-r0
+    Image ID:
+    Port:          8002/TCP
+    Host Port:     0/TCP
+    Command:
+      envoy
+    Args:
+      -c
+      /config/envoy.json
+      --service-cluster $(CONTOUR_NAMESPACE)
+      --service-node $(ENVOY_POD_NAME)
+      --log-level info
+      --base-id 0
+    State:          Waiting
+      Reason:       PodInitializing
+    Ready:          False
+    Restart Count:  0
+    Limits:
+      memory:  256Mi
+    Requests:
+      cpu:      25m
+      memory:   50Mi
+    Readiness:  http-get http://:8002/ready delay=3s timeout=1s period=4s #success=1 #failure=3
+    Environment:
+      CONTOUR_NAMESPACE:       livelink-system (v1:metadata.namespace)
+      ENVOY_POD_NAME:          envoy-oee-gateway-67t2p (v1:metadata.name)
+      DT_DEPLOYMENT_METADATA:  orchestration_tech=Operator-application_monitoring;script_version=v1.9.0;orchestrator_id=728fa293-1692-4ed9-a786-b99e6b27650e
+      LD_PRELOAD:              /opt/dynatrace/oneagent-paas/agent/lib64/liboneagentproc.so
+      DT_STORAGE:              /var/lib/dynatrace/oneagent
+    Mounts:
+      /admin from envoy-admin (rw)
+      /certs from envoycert (ro)
+      /config from envoy-config (ro)
+      /etc/ld.so.preload from dynatrace-config (rw,path="oneagent/ld.so.preload")
+      /opt/dynatrace/oneagent-paas from oneagent-bin (ro)
+      /var/lib/dynatrace from dynatrace-config (rw,path="envoy")
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   False
+  Initialized                 False
+  Ready                       False
+  ContainersReady             False
+  PodScheduled                True
+Volumes:
+  envoycert:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  envoycert-oee-gateway
+    Optional:    false
+  envoy-config:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:
+    SizeLimit:  <unset>
+  envoy-admin:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:
+    SizeLimit:  <unset>
+  oneagent-bin:
+    Type:              CSI (a Container Storage Interface (CSI) volume source)
+    Driver:            csi.oneagent.dynatrace.com
+    FSType:
+    ReadOnly:          true
+    VolumeAttributes:      dynakube=adan1-atlas-prd
+                           mode=app
+                           retryTimeout=10m0s
+  dynatrace-input:
+    Type:                Projected (a volume that contains injected data from multiple sources)
+    SecretName:          dynatrace-bootstrapper-config
+    SecretOptionalName:  0xc0006103e5
+    SecretName:          dynatrace-bootstrapper-certs
+    SecretOptionalName:  0xc0006103e6
+  dynatrace-config:
+    Type:        EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:
+    SizeLimit:   <unset>
+QoS Class:       Burstable
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/disk-pressure:NoSchedule op=Exists
+                 node.kubernetes.io/memory-pressure:NoSchedule op=Exists
+                 node.kubernetes.io/not-ready:NoExecute op=Exists
+                 node.kubernetes.io/pid-pressure:NoSchedule op=Exists
+                 node.kubernetes.io/unreachable:NoExecute op=Exists
+                 node.kubernetes.io/unschedulable:NoSchedule op=Exists
+Events:          <none>
+mesac2@CPC-mesac-4BM7S:~$ kubectl -n "$NS" get ds "$DS" -o wide
+NAME                DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE   CONTAINERS               IMAGES
+                                                                                      SELECTOR
+envoy-oee-gateway   3         3         2       3            2           <none>          37d   shutdown-manager,envoy   case.artifacts.medtronic.com/ext-docker-hub-remote/bitnamilegacy/contour:1.32.1-debian-12-r0,case.artifacts.medtronic.com/ext-docker-hub-remote/bitnamilegacy/envoy:1.34.5-debian-12-r0   app=envoy-oee-gateway
+mesac2@CPC-mesac-4BM7S:~$ kubectl get events -A \
   --sort-by=.metadata.creationTimestamp |
 tail -n 100
+default              37m         Warning   PolicyViolation              namespace/ami-mde
+                                       policy require-namespace-psa-labels/validate-psa-labels fail: [KP-NS-005] Missing or invalid pod-security.kubernetes.io/audit label. Valid values: baseline, restricted (privileged provides no audit visibility)
+livelink-db          37m         Warning   Unhealthy                    pod/livelink-db-site-custom-cluster-1                                        Startup probe failed: Get "https://100.64.18.64:8000/startupz": context deadline exceeded
+default              36m         Warning   PolicyViolation              clusterpolicy/require-namespace-psa-labels                                   Namespace dry-run-test-namespace-p7xbz: [validate-psa-labels] fail; [KP-NS-005] Missing pod-security.kubernetes.io/enforce label. Any valid PSA level (privileged, baseline, restricted) is acceptable.
+default              36m         Warning   PolicyViolation              namespace/dry-run-test-namespace-p7xbz                                       policy require-namespace-psa-labels/validate-psa-labels fail: [KP-NS-005] Missing pod-security.kubernetes.io/enforce label. Any valid PSA level (privileged, baseline, restricted) is acceptable.
+confluent-system     35m         Normal    LeaderElection               lease/confluent-operator-leader-election-lock                                confluent-operator-77f55d5978-rqxrj_63a5d0a0-c018-4355-bd66-0ba6213e6a4b became leader
+livelink-system      34m         Warning   HealthCheckFailed            kustomization/oee-adan
+                                       health check failed after 5m0.012243228s: timeout waiting for: [Kustomization/livelink-system/oee-workloads status: 'InProgress']
+flux-system          31m         Normal    ReconciliationSucceeded      kustomization/gateway-api-crds                                               Reconciliation finished in 650.612555ms, next run in 10m0s
+flux-system          30m         Normal    ReconciliationSucceeded      kustomization/gateway-api-pause                                              Reconciliation finished in 103.344709ms, next run in 10m0s
+default              29m         Warning   PolicyViolation              namespace/dry-run-test-namespace-v2wkf                                       policy require-namespace-psa-labels/validate-psa-labels fail: [KP-NS-005] Missing pod-security.kubernetes.io/enforce label. Any valid PSA level (privileged, baseline, restricted) is acceptable.
+default              29m         Warning   PolicyViolation              clusterpolicy/require-namespace-psa-labels                                   Namespace dry-run-test-namespace-v2wkf: [validate-psa-labels] fail; [KP-NS-005] Missing pod-security.kubernetes.io/enforce label. Any valid PSA level (privileged, baseline, restricted) is acceptable.
+livelink-system      8m46s       Normal    ArtifactUpToDate             helmrepository/oee-artifactory                                               artifact up-to-date with remote revision: 'sha256:b6ed28a2fb642f1264d17644a4c47e3a9efa2f66136806b71908d3be439afa53'
+livelink-system      29m         Normal    GarbageCollectionSucceeded   helmrepository/oee-artifactory                                               garbage collected 1 artifacts
+flux-system          29m         Normal    ReconciliationSucceeded      kustomization/flux-system
+                                       Reconciliation finished in 704.159274ms, next run in 10m0s
+default              28m         Warning   PolicyViolation              namespace/dry-run-test-namespace-5jbqx                                       policy require-namespace-psa-labels/validate-psa-labels fail: [KP-NS-005] Missing pod-security.kubernetes.io/enforce label. Any valid PSA level (privileged, baseline, restricted) is acceptable.
+default              28m         Warning   PolicyViolation              clusterpolicy/require-namespace-psa-labels                                   Namespace dry-run-test-namespace-5jbqx: [validate-psa-labels] fail; [KP-NS-005] Missing pod-security.kubernetes.io/enforce label. Any valid PSA level (privileged, baseline, restricted) is acceptable.
+kube-system          28m         Normal    Pulled                       pod/antrea-agent-9zpqt
+                                       Container image "localhost:5000/tkg/packages/core/antrea@sha256:bc4541965277165ec9ec83e2a168718856c9b97e15f2ae14caaac13600145172" already present on machine
+flux-system          28m         Normal    ReconciliationSucceeded      kustomization/contour-crds
+                                       Reconciliation finished in 541.128101ms, next run in 10m0s
+kube-system          28m         Normal    Created                      pod/antrea-agent-9zpqt
+                                       Created container: antrea-agent
+livelink-system      28m         Warning   HealthCheckFailed            kustomization/oee-adan
+                                       health check failed after 5m0.013951819s: timeout waiting for: [Kustomization/livelink-system/oee-workloads status: 'InProgress']
+confluent-system     28m         Normal    Started                      pod/confluent-operator-77f55d5978-rqxrj                                      Started container confluent-operator
+confluent-system     27m         Normal    LeaderElection               lease/confluent-operator-leader-election-lock                                confluent-operator-77f55d5978-rqxrj_04ceb665-3d50-4f8c-8286-3b6406564edc became leader
+flux-system          2m49s       Normal    DependencyNotReady           kustomization/customer-components                                            Dependencies do not meet ready condition, retrying in 30s
+livelink-db          27m         Warning   Unhealthy                    pod/livelink-db-site-custom-cluster-1                                        (combined from similar events): Readiness probe failed: Get "https://100.64.18.64:8000/readyz": EOF
+kube-system          27m         Normal    Started                      pod/antrea-agent-9zpqt
+                                       Started container antrea-agent
+default              25m         Warning   PolicyViolation              namespace/dry-run-test-namespace-lgjnp                                       policy require-namespace-psa-labels/validate-psa-labels fail: [KP-NS-005] Missing pod-security.kubernetes.io/enforce label. Any valid PSA level (privileged, baseline, restricted) is acceptable.
+default              25m         Warning   PolicyViolation              clusterpolicy/require-namespace-psa-labels                                   Namespace dry-run-test-namespace-lgjnp: [validate-psa-labels] fail; [KP-NS-005] Missing pod-security.kubernetes.io/enforce label. Any valid PSA level (privileged, baseline, restricted) is acceptable.
+cnpg-system          24m         Warning   Unhealthy                    pod/cloudnative-pg-75d7696cb5-wlz8k                                          (combined from similar events): Readiness probe failed: Get "https://100.64.18.37:9443/readyz": net/http: request canceled (Client.Timeout exceeded while awaiting headers)
+cert-manager         26m         Warning   Unhealthy                    pod/cert-manager-65bb4b7446-4hk68                                            Liveness probe failed: Get "http://100.64.18.10:9403/livez": EOF (Client.Timeout exceeded while awaiting headers)
+flux-system          23m         Warning   HealthCheckFailed            kustomization/common-components                                              health check failed after 5m0.013118897s: timeout waiting for: [HelmRelease/flux-system/common-resources status: 'InProgress']
+cert-manager         25m         Warning   Unhealthy                    pod/cert-manager-65bb4b7446-vfqzg                                            Liveness probe failed: Get "http://100.64.18.22:9403/livez": EOF
+cert-manager         24m         Normal    Pulled                       pod/cert-manager-webhook-5c564bbfcd-2vwnh                                    Container image "case.artifacts.medtronic.com/ioss-docker-common-components-local/all-clusters/jetstack/cert-manager-webhook:v1.17.1" already present on machine
+livelink-system      22m         Warning   HealthCheckFailed            kustomization/oee-adan
+                                       health check failed after 5m0.012054216s: timeout waiting for: [Kustomization/livelink-system/oee-workloads status: 'InProgress']
+ami-mde-db           2m22s       Normal    Pulled                       pod/ami-mde-db-mde-prd-cluster-1                                             Container image "case.artifacts.medtronic.com/ext-docker-ghcr-remote/cloudnative-pg/postgresql:17.11" already present on machine
+ami-mde-db           2m4s        Normal    Created                      pod/ami-mde-db-mde-prd-cluster-1                                             Created container: postgres
+ami-mde-db           73s         Normal    Started                      pod/ami-mde-db-mde-prd-cluster-1                                             Started container postgres
+kube-system          21m         Warning   Unhealthy                    pod/antrea-agent-9zpqt
+                                       Liveness probe failed: Get "https://localhost:10350/livez": context deadline exceeded
+flux-system          20m         Normal    ReconciliationSucceeded      kustomization/gateway-api-crds                                               Reconciliation finished in 660.783931ms, next run in 10m0s
+flux-system          20m         Normal    ReconciliationSucceeded      kustomization/gateway-api-pause                                              Reconciliation finished in 74.597914ms, next run in 10m0s
+livelink-system      19m         Warning   ReconciliationFailed         kustomization/oee-workloads
+                                       Database/livelink-db/audit dry-run failed (InternalError): Internal error occurred: failed calling webhook "mdatabase.cnpg.io": failed to call webhook: Post "https://cnpg-webhook-service.cnpg-system.svc:443/mutate-postgresql-cnpg-io-v1-database?timeout=10s": dial tcp 100.65.66.226:443: connect: connection refused
+ami-mde-db           9m26s       Warning   Unhealthy                    pod/ami-mde-db-mde-prd-cluster-1                                             (combined from similar events): Readiness probe failed: Get "https://100.64.18.63:8000/readyz": unexpected EOF
+flux-system          19m         Normal    ReconciliationSucceeded      kustomization/flux-system
+                                       Reconciliation finished in 601.484712ms, next run in 10m0s
+default              18m         Warning   PolicyViolation              namespace/dry-run-test-namespace-7cp77                                       policy require-namespace-psa-labels/validate-psa-labels fail: [KP-NS-005] Missing pod-security.kubernetes.io/enforce label. Any valid PSA level (privileged, baseline, restricted) is acceptable.
+default              18m         Warning   PolicyViolation              clusterpolicy/require-namespace-psa-labels                                   Namespace dry-run-test-namespace-7cp77: [validate-psa-labels] fail; [KP-NS-005] Missing pod-security.kubernetes.io/enforce label. Any valid PSA level (privileged, baseline, restricted) is acceptable.
+flux-system          18m         Normal    ReconciliationSucceeded      kustomization/contour-crds
+                                       Reconciliation finished in 500.330647ms, next run in 10m0s
+dynatrace-operator   19m         Warning   Unhealthy                    pod/dynatrace-fluent-bit-h4bnb                                               Readiness probe failed: Get "http://100.64.18.51:2020/api/v1/health": dial tcp 100.64.18.51:2020: connect: connection refused (Client.Timeout exceeded while awaiting headers)
+flux-system          17m         Warning   HealthCheckFailed            kustomization/common-components                                              health check failed after 5m0.012439322s: timeout waiting for: [HelmRelease/flux-system/common-resources status: 'InProgress']
+livelink-db          19m         Warning   Unhealthy                    pod/livelink-db-site-custom-cluster-1                                        Startup probe failed: Get "https://100.64.18.64:8000/startupz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+livelink-db          19m         Warning   Unhealthy                    pod/livelink-db-timescaledb-cluster-1                                        Readiness probe failed: Get "https://100.64.18.61:8000/readyz": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)
+kube-system          19m         Warning   Unhealthy                    pod/antrea-agent-9zpqt
+                                       Readiness probe failed: Get "https://localhost:10350/readyz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+livelink-system      16m         Warning   HealthCheckFailed            kustomization/oee-adan
+                                       health check failed after 5m0.011490738s: timeout waiting for: [Kustomization/livelink-system/oee-workloads status: 'InProgress']
+contour-system       18m         Warning   Unhealthy                    pod/contour-envoy-l5xbs
+                                       Readiness probe failed: Get "http://100.64.18.56:8002/ready": dial tcp 100.64.18.56:8002: connect: connection refused (Client.Timeout exceeded while awaiting headers)
+livelink-hivemq      16m         Warning   FailedMount                  pod/livelink-hivemq-3
+                                       MountVolume.SetUp failed for volume "broker-configuration" : failed to sync configmap cache: timed out waiting for the condition
+livelink-hivemq      16m         Warning   FailedMount                  pod/livelink-hivemq-3
+                                       MountVolume.SetUp failed for volume "extension-configuration-hivemq-kafka-extension" : failed to sync configmap cache: timed out waiting for the condition
+livelink-hivemq      16m         Warning   FailedMount                  pod/livelink-hivemq-3
+                                       MountVolume.SetUp failed for volume "licenses" : failed to sync secret cache: timed out waiting for the condition
+livelink-hivemq      16m         Warning   FailedMount                  pod/livelink-hivemq-3
+                                       MountVolume.SetUp failed for volume "pod-info" : failed to sync configmap cache: timed out waiting for the condition
+livelink-hivemq      16m         Warning   FailedMount                  pod/livelink-hivemq-3
+                                       MountVolume.SetUp failed for volume "dynatrace-input" : failed to sync secret cache: timed out waiting for the condition
+livelink-hivemq      16m         Warning   FailedMount                  pod/livelink-hivemq-3
+                                       MountVolume.SetUp failed for volume "kube-api-access-9w8jq" : failed to sync configmap cache: timed out waiting for the condition
+cnpg-system          5m6s        Normal    Pulled                       pod/cloudnative-pg-75d7696cb5-rvpr2                                          Container image "case.artifacts.medtronic.com/ioss-docker-common-components-local/tkg/cloudnative-pg/cloudnative-pg:1.28.4" already present on machine
+contour-system       14m         Normal    Pulled                       pod/contour-envoy-l5xbs
+                                       Container image "case.artifacts.medtronic.com/ext-docker-hub-remote/bitnamilegacy/envoy:1.34.5-debian-12-r0" already present on machine
+contour-system       14m         Normal    Created                      pod/contour-envoy-l5xbs
+                                       Created container: envoy
+default              14m         Warning   PolicyViolation              clusterpolicy/require-namespace-psa-labels                                   Namespace dry-run-test-namespace-4nvhz: [validate-psa-labels] fail; [KP-NS-005] Missing pod-security.kubernetes.io/enforce label. Any valid PSA level (privileged, baseline, restricted) is acceptable.
+default              14m         Warning   PolicyViolation              namespace/dry-run-test-namespace-4nvhz                                       policy require-namespace-psa-labels/validate-psa-labels fail: [KP-NS-005] Missing pod-security.kubernetes.io/enforce label. Any valid PSA level (privileged, baseline, restricted) is acceptable.
+cnpg-system          13m         Normal    LeaderElection               lease/db9c8771.cnpg.io
+                                       cloudnative-pg-75d7696cb5-rvpr2_038e8e76-948a-4b14-bc9d-6d13e4817401 became leader
+contour-system       13m         Normal    Started                      pod/contour-envoy-l5xbs
+                                       Started container envoy
+cnpg-system          12m         Warning   Unhealthy                    pod/cloudnative-pg-75d7696cb5-rvpr2                                          Startup probe failed: Get "https://100.64.18.28:9443/readyz": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)
+cnpg-system          12m         Warning   Unhealthy                    pod/cloudnative-pg-75d7696cb5-rvpr2                                          Startup probe failed: Get "https://100.64.18.28:9443/readyz": context deadline exceeded
+cnpg-system          9m49s       Warning   Unhealthy                    pod/cloudnative-pg-75d7696cb5-rvpr2                                          Readiness probe failed: Get "https://100.64.18.28:9443/readyz": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)
+cnpg-system          12m         Warning   Unhealthy                    pod/cloudnative-pg-75d7696cb5-rvpr2                                          Liveness probe failed: Get "https://100.64.18.28:9443/readyz": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)
+flux-system          11m         Warning   HealthCheckFailed            kustomization/common-components                                              health check failed after 5m0.012217922s: timeout waiting for: [HelmRelease/flux-system/common-resources status: 'InProgress']
+cnpg-system          9m50s       Warning   Unhealthy                    pod/cloudnative-pg-75d7696cb5-rvpr2                                          Readiness probe failed: Get "https://100.64.18.28:9443/readyz": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+cnpg-system          3m3s        Warning   Unhealthy                    pod/cloudnative-pg-75d7696cb5-rvpr2                                          Readiness probe failed: Get "https://100.64.18.28:9443/readyz": context deadline exceeded
+cnpg-system          9m26s       Warning   Unhealthy                    pod/cloudnative-pg-75d7696cb5-rvpr2                                          Readiness probe failed: Get "https://100.64.18.28:9443/readyz": net/http: request canceled (Client.Timeout exceeded while awaiting headers)
+cnpg-system          9m51s       Warning   Unhealthy                    pod/cloudnative-pg-75d7696cb5-rvpr2                                          Liveness probe failed: Get "https://100.64.18.28:9443/readyz": context deadline exceeded
+livelink-system      10m         Normal    Progressing                  kustomization/oee-workloads
+                                       HelmRepository/livelink-system/hivemq configured
+livelink-system      10m         Normal    ReconciliationSucceeded      kustomization/oee-workloads
+                                       Reconciliation finished in 5.962845401s, next run in 3m0s
+livelink-system      10m         Normal    NewArtifact                  helmrepository/hivemq
+                                       stored fetched index of size 312.1kB from 'https://case.artifacts.medtronic.com/artifactory/ext-helm-hivemq-virtual/'
+livelink-system      10m         Normal    ReconciliationSucceeded      kustomization/oee-adan
+                                       Reconciliation finished in 4m25.165946451s, next run in 10m0s
+livelink-system      10m         Normal    Progressing                  kustomization/oee-adan
+                                       Health check passed in 4m25.019956782s
+flux-system          10m         Normal    ReconciliationSucceeded      kustomization/gateway-api-crds                                               Reconciliation finished in 660.793618ms, next run in 10m0s
+cert-manager         11m         Warning   Unhealthy                    pod/cert-manager-webhook-5c564bbfcd-2vwnh                                    Liveness probe failed: Get "http://100.64.18.11:6080/livez": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+flux-system          10m         Normal    ReconciliationSucceeded      kustomization/gateway-api-pause                                              Reconciliation finished in 102.516599ms, next run in 10m0s
+kube-system          11m         Warning   Unhealthy                    pod/antrea-agent-9zpqt
+                                       Liveness probe failed: Get "https://localhost:10350/livez": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)
+flux-system          9m41s       Normal    ReconciliationSucceeded      kustomization/flux-system
+                                       Reconciliation finished in 593.131774ms, next run in 10m0s
+cnpg-system          10m         Warning   Unhealthy                    pod/cloudnative-pg-75d7696cb5-rvpr2                                          Liveness probe failed: Get "https://100.64.18.28:9443/readyz": net/http: request canceled (Client.Timeout exceeded while awaiting headers)
+flux-system          8m36s       Normal    ReconciliationSucceeded      kustomization/contour-crds
+                                       Reconciliation finished in 420.828053ms, next run in 10m0s
+cnpg-system          9m34s       Normal    Killing                      pod/cloudnative-pg-75d7696cb5-rvpr2                                          Container manager failed liveness probe, will be restarted
+dynatrace-operator   8m9s        Normal    Inject                       dynakube/adan1-atlas-prd
+                                       Injecting the necessary info into pod  in namespace default
+kube-system          7m34s       Warning   FailedKillPod                pod/node-debugger-adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6-vwl9c   error killing pod: [failed to "KillContainer" for "debugger" with KillContainerError: "rpc error: code = DeadlineExceeded desc = stream terminated by RST_STREAM with error code: CANCEL", failed to "KillPodSandbox" for "987854f6-dfe1-4e12-b1d0-a569bf520886" with KillPodSandboxError: "rpc error: code = DeadlineExceeded desc = context deadline exceeded"]
+flux-system          5m46s       Warning   HealthCheckFailed            kustomization/common-components                                              health check failed after 5m0.014533024s: timeout waiting for: [HelmRelease/flux-system/common-resources status: 'InProgress']
+cert-manager         5m46s       Warning   Unhealthy                    pod/cert-manager-webhook-5c564bbfcd-2vwnh                                    Readiness probe failed: Get "http://100.64.18.11:6080/healthz": dial tcp 100.64.18.11:6080: connect: connection refused (Client.Timeout exceeded while awaiting headers)
+cnpg-system          4m20s       Normal    LeaderElection               lease/db9c8771.cnpg.io
+                                       cloudnative-pg-75d7696cb5-rvpr2_dbe4b809-e98b-4f35-b29c-88d37ebdcefb became leader
+flux-system          4m5s        Normal    ArtifactUpToDate             helmchart/flux-system-dynatrace-operator                                     artifact up-to-date with remote revision: '1.9.0'
+default              3m21s       Warning   PolicyViolation              namespace/dry-run-test-namespace-tvfqw                                       policy require-namespace-psa-labels/validate-psa-labels fail: [KP-NS-005] Missing pod-security.kubernetes.io/enforce label. Any valid PSA level (privileged, baseline, restricted) is acceptable.
+default              3m21s       Warning   PolicyViolation              clusterpolicy/require-namespace-psa-labels                                   Namespace dry-run-test-namespace-tvfqw: [validate-psa-labels] fail; [KP-NS-005] Missing pod-security.kubernetes.io/enforce label. Any valid PSA level (privileged, baseline, restricted) is acceptable.
+flux-system          2m37s       Normal    ArtifactUpToDate             helmchart/flux-system-gpu-operator                                           artifact up-to-date with remote revision: 'v25.10.0'
+kube-system          75s         Warning   Unhealthy                    pod/antrea-agent-9zpqt
+                                       Liveness probe failed: Get "https://localhost:10350/livez": net/http: request canceled (Client.Timeout exceeded while awaiting headers)
+livelink-system      66s         Normal    GarbageCollectionSucceeded   helmrepository/hivemq
+                                       garbage collected 1 artifacts
+livelink-system      66s         Normal    ArtifactUpToDate             helmrepository/hivemq
+                                       artifact up-to-date with remote revision: 'sha256:69883f6fd673ba226c7d0cdd1e7a54c5da9e62f81850748b5d6cb334a1a2f569'
+flux-system          47s         Normal    ReconciliationSucceeded      kustomization/gateway-api-crds                                               Reconciliation finished in 650.469883ms, next run in 10m0s
+flux-system          25s         Normal    ReconciliationSucceeded      kustomization/gateway-api-pause                                              Reconciliation finished in 90.096917ms, next run in 10m0s
+mesac2@CPC-mesac-4BM7S:~$ kubectl -n livelink-hivemq get sts,pods -o wide
+NAME                               READY   AGE   CONTAINERS   IMAGES
+statefulset.apps/livelink-hivemq   3/4     37d   hivemq       case.artifacts.medtronic.com/ext-docker-hub-remote/hivemq/hivemq4:k8s-4.42.0
 
-Esto determinará si el problema actual es:
-
-FailedScheduling
-
-ContainerCreating
-
-Montaje de volúmenes
-
-Image pull
-
-Dynatrace injection
-
-CNI/network
-
-Otro fallo posterior al scheduling
-
-
-Validación de HiveMQ
-
-livelink-hivemq-3 parece el único workload de aplicación con suficiente request para liberar memoria, pero es un StatefulSet, no un pod stateless. No debe eliminarse sin confirmar su estado y arquitectura:
-
-kubectl -n livelink-hivemq get sts,pods -o wide
-
-kubectl -n livelink-hivemq get sts livelink-hivemq -o json |
+NAME                    READY   STATUS     RESTARTS   AGE     IP             NODE
+                    NOMINATED NODE   READINESS GATES
+pod/livelink-hivemq-0   1/1     Running    0          2d17h   100.64.25.15   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-9s8g7   <none>           <none>
+pod/livelink-hivemq-1   1/1     Running    0          2d17h   100.64.25.16   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-9s8g7   <none>           <none>
+pod/livelink-hivemq-2   1/1     Running    0          2d17h   100.64.25.17   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-9s8g7   <none>           <none>
+pod/livelink-hivemq-3   0/1     Init:0/2   0          50m     <none>         adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6   <none>           <none>
+mesac2@CPC-mesac-4BM7S:~$ kubectl -n livelink-hivemq get sts livelink-hivemq -o json |
 jq '{
   replicas: .spec.replicas,
   readyReplicas: .status.readyReplicas,
@@ -121,327 +632,248 @@ jq '{
   affinity: .spec.template.spec.affinity,
   topologySpreadConstraints: .spec.template.spec.topologySpreadConstraints
 }'
-
-kubectl -n livelink-hivemq describe pod livelink-hivemq-3
-
-No sabemos todavía por qué livelink-hivemq-3 no aparece en kubectl top. Podría estar iniciando, no tener métricas o encontrarse en un estado anormal.
-
-Decisión recomendada
-
-No ejecutes todavía:
-
-kubectl delete pod ...
-kubectl cordon ...
-
-Tampoco elimines una instancia CloudNativePG. Las dos opciones pueden trasladar el problema a HiveMQ o a una base de datos y no garantizan que el pod recreado termine en otro nodo.
-
-El orden correcto es:
-
-1. Confirmar el estado actual de Envoy.
-
-
-2. Confirmar el estado de livelink-hivemq-3.
-
-
-3. Verificar capacidad por requests en los otros worker nodes.
-
-
-4. Si Envoy continúa en FailedScheduling, solicitar expansión del worker pool.
-
-
-5. Solo como mitigación urgente, coordinar con el propietario de HiveMQ o DBA una reubicación controlada.
-
-
-
-Con la evidencia actual, la solución más segura sigue siendo aumentar capacidad. Mover una base de datos para liberar únicamente 88Mi sería una intervención desproporcionada y arriesgada.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-tem                   kubescape-node-agent-98m9w                                   kubescape-node-agent           2m           209Mi
-atlas-system                   kubescape-node-agent-gw4jn                                   kubescape-node-agent           2m           208Mi
-livelink-db                    livelink-db-timescaledb-cluster-3                            postgres
-             4m           206Mi
-livelink-db                    livelink-db-timescaledb-cluster-2                            postgres
-             3m           205Mi
-atlas-system                   kubescape-node-agent-mnptw                                   kubescape-node-agent           2m           204Mi
-livelink-db                    livelink-db-platform-cluster-3                               postgres
-             3m           193Mi
-kube-system                    antrea-agent-2klvj                                           antrea-ovs                     13m          112Mi
-kube-system                    antrea-agent-2klvj                                           antrea-agent                   7m           73Mi
-kube-system                    antrea-agent-bh5cc                                           antrea-ovs                     19m          113Mi
-kube-system                    antrea-agent-bh5cc                                           antrea-agent                   12m          70Mi
-kube-system                    kube-controller-manager-adan1-atlas-prd-r7ftq-gtxjx          kube-controller-manager        16m          182Mi
-kube-system                    antrea-agent-jnvrj                                           antrea-ovs                     8m           109Mi
-kube-system                    antrea-agent-jnvrj                                           antrea-agent                   7m           68Mi
-kube-system                    antrea-agent-sqp5j                                           antrea-ovs                     8m           109Mi
-kube-system                    antrea-agent-sqp5j                                           antrea-agent                   7m           67Mi
-kube-system                    antrea-agent-m6tlm                                           antrea-ovs                     8m           109Mi
-kube-system                    antrea-agent-m6tlm                                           antrea-agent                   7m           66Mi
-kube-system                    etcd-adan1-atlas-prd-r7ftq-gtxjx                             etcd
-             48m          165Mi
-kube-system                    antrea-agent-rz9ks                                           antrea-agent                   7m           93Mi
-kube-system                    antrea-agent-rz9ks                                           antrea-ovs                     11m          69Mi
-kube-system                    etcd-adan1-atlas-prd-r7ftq-whtgs                             etcd
-             54m          150Mi
-livelink-db                    livelink-db-site-custom-cluster-3                            postgres
-             5m           146Mi
-ami-mde-db                     ami-mde-db-mde-prd-cluster-3                                 postgres
-             5m           143Mi
-kube-system                    etcd-adan1-atlas-prd-r7ftq-fqdq2                             etcd
-             72m          142Mi
-kube-system                    antrea-agent-kjq85                                           antrea-agent                   6m           73Mi
-kube-system                    antrea-agent-kjq85                                           antrea-ovs
-             7m           67Mi
-kube-system                    antrea-agent-nwxkb                                           antrea-agent                   5m           69Mi
-kube-system                    antrea-agent-nwxkb                                           antrea-ovs                     8m           68Mi
-tkg-system                     kapp-controller-7689ccb896-tnwrr                             kapp-controller                2m           107Mi
-tkg-system                     kapp-controller-7689ccb896-tnwrr                             kapp-controller-sidecarexec    1m           14Mi
-livelink-db                    livelink-db-site-custom-cluster-2                            postgres
-             287m         120Mi
-gpu-operator                   gpu-feature-discovery-468tx                                  gpu-feature-discovery          1m           68Mi
-gpu-operator                   gpu-feature-discovery-468tx                                  config-manager                 1m           34Mi
-vmware-system-csi              vsphere-csi-controller-9778f7d45-dlzlh                       vsphere-syncer                 2m           26Mi
-vmware-system-csi              vsphere-csi-controller-9778f7d45-dlzlh                       vsphere-csi-controller         1m           19Mi
-vmware-system-csi              vsphere-csi-controller-9778f7d45-dlzlh                       csi-provisioner                1m           15Mi
-vmware-system-csi              vsphere-csi-controller-9778f7d45-dlzlh                       csi-attacher                   1m           11Mi
-vmware-system-csi              vsphere-csi-controller-9778f7d45-dlzlh                       csi-resizer                    2m           10Mi
-vmware-system-csi              vsphere-csi-controller-9778f7d45-dlzlh                       csi-snapshotter                1m           10Mi
-vmware-system-csi              vsphere-csi-controller-9778f7d45-dlzlh                       liveness-probe                 1m           6Mi
-gpu-operator                   gpu-feature-discovery-g2k2k                                  gpu-feature-discovery          1m           64Mi
-gpu-operator                   gpu-feature-discovery-g2k2k                                  config-manager                 1m           35Mi
-gpu-operator                   gpu-feature-discovery-8ssdm                                  gpu-feature-discovery          3m           67Mi
-gpu-operator                   gpu-feature-discovery-8ssdm                                  config-manager                 1m           30Mi
-flux-system                    kustomize-controller-5f7c645849-txfdf                        manager
-             29m          95Mi
-kube-system                    antrea-controller-6c6bcd674d-v8b5x                           antrea-controller              3m           83Mi
-gpu-operator                   gpu-operator-78cc869767-9xjdr                                gpu-operator                   1m           80Mi
-gpu-operator                   nvidia-device-plugin-daemonset-gnqq4                         nvidia-device-plugin           1m           43Mi
-gpu-operator                   nvidia-device-plugin-daemonset-gnqq4                         config-manager                 1m           34Mi
-gpu-operator                   nvidia-device-plugin-daemonset-8pmbl                         nvidia-device-plugin           1m           42Mi
-gpu-operator                   nvidia-device-plugin-daemonset-8pmbl                         config-manager                 1m           35Mi
-gpu-operator                   nvidia-device-plugin-daemonset-lbm6w                         nvidia-device-plugin           1m           38Mi
-gpu-operator                   nvidia-device-plugin-daemonset-lbm6w                         config-manager                 1m           35Mi
-external-secrets               external-secrets-cert-controller-597c787487-wtnsg            cert-controller                1m           73Mi
-kyverno-system                 kyverno-admission-controller-5655b8f7fc-mtt4s                kyverno
-             9m           66Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-shwfq                          provisioner                    1m           25Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-shwfq                          server
-             1m           13Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-shwfq                          liveness-probe                 1m           10Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-shwfq                          registrar
-             0m           8Mi
-kyverno-system                 kyverno-reports-controller-5c5cbf88f9-tx2vs                  controller                     2m           59Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-x9x2d                          provisioner                    1m           25Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-x9x2d                          server
-             1m           11Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-x9x2d                          liveness-probe                 1m           10Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-x9x2d                          registrar
-             0m           8Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-xprqz                          provisioner                    1m           25Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-xprqz                          server
-             1m           11Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-xprqz                          liveness-probe                 1m           11Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-xprqz                          registrar
-             0m           8Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-ft8zh                          provisioner                    1m           25Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-ft8zh                          server
-             1m           11Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-ft8zh                          liveness-probe                 1m           10Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-ft8zh                          registrar
-             0m           8Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-9n6g9                          provisioner                    1m           24Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-9n6g9                          liveness-probe                 1m           11Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-9n6g9                          server
-             1m           10Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-9n6g9                          registrar
-             1m           8Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-8njtl                          provisioner                    1m           24Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-8njtl                          liveness-probe                 1m           11Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-8njtl                          server
-             1m           10Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-8njtl                          registrar
-             1m           8Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-gvhh4                          provisioner                    1m           24Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-gvhh4                          liveness-probe                 1m           11Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-gvhh4                          server
-             1m           10Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-gvhh4                          registrar
-             1m           8Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-fg2gd                          provisioner                    1m           24Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-fg2gd                          liveness-probe                 1m           11Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-fg2gd                          server
-             1m           10Mi
-dynatrace-operator             dynatrace-oneagent-csi-driver-fg2gd                          registrar
-             0m           8Mi
-kyverno-system                 kyverno-admission-controller-5655b8f7fc-rst4g                kyverno
-             3m           51Mi
-vmware-system-csi              vsphere-csi-node-bq5jn                                       vsphere-csi-node               1m           38Mi
-vmware-system-csi              vsphere-csi-node-bq5jn                                       node-driver-registrar          2m           7Mi
-vmware-system-csi              vsphere-csi-node-bq5jn                                       liveness-probe                 1m           4Mi
-atlas-system                   kubescape-storage-87b86b58f-2hl2c                            apiserver
-             2m           48Mi
-flux-system                    source-controller-7c74d5c6d8-lvv85                           manager
-             4m           48Mi
-gpu-operator                   nvidia-container-toolkit-daemonset-htrj8                     nvidia-container-toolkit-ctr   2m           48Mi
-kube-system                    metrics-server-7fb85c98cf-gw9vf                              metrics-server                 2m           47Mi
-gpu-operator                   nvidia-container-toolkit-daemonset-8njg5                     nvidia-container-toolkit-ctr   2m           47Mi
-gpu-operator                   nvidia-container-toolkit-daemonset-rzxjr                     nvidia-container-toolkit-ctr   2m           47Mi
-dynatrace-operator             dynatrace-fluent-bit-szxhr                                   fluent-bit                     8m           47Mi
-kyverno-system                 kyverno-admission-controller-5655b8f7fc-4q724                kyverno
-             2m           47Mi
-kube-system                    kube-scheduler-adan1-atlas-prd-r7ftq-gtxjx                   kube-scheduler                 4m           47Mi
-livelink-system                envoy-oee-gateway-fdfhr                                      envoy
-             3m           34Mi
-livelink-system                envoy-oee-gateway-fdfhr                                      shutdown-manager               1m           8Mi
-livelink-system                envoy-oee-gateway-58ffl                                      envoy
-             3m           33Mi
-livelink-system                envoy-oee-gateway-58ffl                                      shutdown-manager               1m           8Mi
-external-secrets               external-secrets-55777f75bd-d92tw                            external-secrets               5m           38Mi
-kube-system                    kube-scheduler-adan1-atlas-prd-r7ftq-whtgs                   kube-scheduler                 4m           38Mi
-kube-system                    kube-scheduler-adan1-atlas-prd-r7ftq-fqdq2                   kube-scheduler                 4m           38Mi
-kyverno-system                 kyverno-background-controller-65cd987565-bbpg4               controller                     1m           38Mi
-vmware-system-csi              vsphere-csi-node-9wftd                                       vsphere-csi-node               0m           23Mi
-vmware-system-csi              vsphere-csi-node-9wftd                                       node-driver-registrar          1m           6Mi
-vmware-system-csi              vsphere-csi-node-9wftd                                       liveness-probe                 1m           4Mi
-livelink-system                contour-oee-gateway-7745c66598-t9jzh                         contour
-             1m           31Mi
-external-secrets               external-secrets-55777f75bd-6jpqt                            external-secrets               2m           31Mi
-contour-system                 contour-envoy-xh86p                                          envoy
-             4m           18Mi
-contour-system                 contour-envoy-xh86p                                          shutdown-manager               1m           10Mi
-kyverno-system                 kyverno-reports-controller-5c5cbf88f9-zthkr                  controller                     2m           28Mi
-dynatrace-operator             adan1-atlas-prd-otel-collector-0                             collector
-             1m           28Mi
-kyverno-system                 kyverno-background-controller-65cd987565-m9kr7               controller                     1m           27Mi
-secretgen-controller           secretgen-controller-9ff67f8bb-4mckq                         secretgen-controller           1m           27Mi
-flux-system                    helm-controller-6d98cf5d6-njzr6                              manager
-             1m           27Mi
-dynatrace-operator             dynatrace-operator-b55659d64-c6j9k                           operator
-             1m           27Mi
-contour-system                 contour-envoy-46zbs                                          envoy
-             4m           18Mi
-contour-system                 contour-envoy-46zbs                                          shutdown-manager               1m           8Mi
-contour-system                 contour-envoy-xtfhs                                          envoy
-             4m           18Mi
-contour-system                 contour-envoy-xtfhs                                          shutdown-manager               1m           8Mi
-contour-system                 contour-envoy-jsm27                                          envoy
-             4m           18Mi
-contour-system                 contour-envoy-jsm27                                          shutdown-manager               1m           8Mi
-vmware-system-cloud-provider   guest-cluster-cloud-provider-7d444d9946-tpgw6                guest-cluster-cloud-provider   1m           26Mi
-contour-system                 contour-envoy-85mqn                                          envoy
-             4m           18Mi
-contour-system                 contour-envoy-85mqn                                          shutdown-manager               1m           8Mi
-kyverno-system                 kyverno-cleanup-controller-5d9f8df4d-bzhf6                   controller                     6m           25Mi
-external-secrets               external-secrets-webhook-c566b5766-cq554                     webhook
-             2m           24Mi
-traefik-gateway                traefik-gateway-6c9458d4bc-rcbl2                             traefik-gateway                1m           23Mi
-vmware-system-csi              vsphere-csi-node-4z298                                       vsphere-csi-node               1m           13Mi
-vmware-system-csi              vsphere-csi-node-4z298                                       node-driver-registrar          1m           5Mi
-vmware-system-csi              vsphere-csi-node-4z298                                       liveness-probe                 1m           3Mi
-livelink-system                contour-oee-gateway-7745c66598-4njzt                         contour
-             1m           23Mi
-traefik-gateway                traefik-gateway-6c9458d4bc-smxtq                             traefik-gateway                1m           23Mi
-dynatrace-operator             dynatrace-fluent-bit-rtg6k                                   fluent-bit                     25m          22Mi
-kube-system                    coredns-697df5f89-mpjrp                                      coredns
-             5m           22Mi
-gpu-operator                   gpu-operator-node-feature-discovery-master-b946897dc-mk7kp   master
-             1m           22Mi
-kube-system                    coredns-697df5f89-r4t5r                                      coredns
-             6m           22Mi
-vmware-system-csi              vsphere-csi-node-fncfv                                       vsphere-csi-node               1m           11Mi
-vmware-system-csi              vsphere-csi-node-fncfv                                       node-driver-registrar          2m           5Mi
-vmware-system-csi              vsphere-csi-node-fncfv                                       liveness-probe                 1m           4Mi
-vmware-system-csi              vsphere-csi-node-78d5h                                       vsphere-csi-node               1m           11Mi
-vmware-system-csi              vsphere-csi-node-78d5h                                       node-driver-registrar          2m           5Mi
-vmware-system-csi              vsphere-csi-node-78d5h                                       liveness-probe                 1m           4Mi
-vmware-system-csi              vsphere-csi-node-k8q7v                                       vsphere-csi-node               0m           11Mi
-vmware-system-csi              vsphere-csi-node-k8q7v                                       node-driver-registrar          2m           5Mi
-vmware-system-csi              vsphere-csi-node-k8q7v                                       liveness-probe                 1m           4Mi
-flux-system                    notification-controller-8966476d6-pl9j6                      manager
-             1m           21Mi
-dynatrace-operator             dynatrace-fluent-bit-9jz7v                                   fluent-bit                     4m           21Mi
-vmware-system-csi              vsphere-csi-node-thscd                                       vsphere-csi-node               1m           11Mi
-vmware-system-csi              vsphere-csi-node-thscd                                       node-driver-registrar          1m           5Mi
-vmware-system-csi              vsphere-csi-node-thscd                                       liveness-probe                 1m           4Mi
-gpu-operator                   gpu-operator-node-feature-discovery-worker-rwgtw             worker
-             1m           20Mi
-vmware-system-csi              vsphere-csi-node-rjlcx                                       vsphere-csi-node               0m           11Mi
-vmware-system-csi              vsphere-csi-node-rjlcx                                       node-driver-registrar          2m           4Mi
-vmware-system-csi              vsphere-csi-node-rjlcx                                       liveness-probe                 1m           4Mi
-kube-system                    kube-proxy-pxplb                                             kube-proxy                     1m           19Mi
-kube-system                    kube-proxy-gmg5z                                             kube-proxy                     1m           18Mi
-kube-system                    kube-proxy-7xgkm                                             kube-proxy                     1m           18Mi
-kube-system                    kube-proxy-cpcsd                                             kube-proxy                     1m           18Mi
-kube-system                    kube-proxy-nxcc4                                             kube-proxy                     1m           18Mi
-atlas-system                   external-dns-7d99b6978-57w2c                                 external-dns                   1m           18Mi
-kube-system                    kube-proxy-265gm                                             kube-proxy                     1m           18Mi
-kube-system                    kube-proxy-dmjs8                                             kube-proxy                     1m           18Mi
-kyverno-system                 kyverno-cleanup-controller-5d9f8df4d-zd82k                   controller                     1m           18Mi
-kube-system                    kube-controller-manager-adan1-atlas-prd-r7ftq-whtgs          kube-controller-manager        1m           17Mi
-kube-system                    kube-controller-manager-adan1-atlas-prd-r7ftq-fqdq2          kube-controller-manager        1m           17Mi
-kube-system                    kube-proxy-lh694                                             kube-proxy                     1m           17Mi
-dynatrace-operator             dynatrace-webhook-86457b7fc7-txx7m                           webhook
-             1m           17Mi
-atlas-system                   kubescape-operator-547fb9745f-xv4hw                          kubescape-operator             1m           15Mi
-dynatrace-operator             dynatrace-webhook-86457b7fc7-dv8qh                           webhook
-             1m           15Mi
-gpu-operator                   gpu-operator-node-feature-discovery-worker-84lzv             worker
-             1m           15Mi
-gpu-operator                   gpu-operator-node-feature-discovery-worker-8t74v             worker
-             1m           14Mi
-gpu-operator                   gpu-operator-node-feature-discovery-worker-cb7wb             worker
-             1m           14Mi
-gpu-operator                   gpu-operator-node-feature-discovery-worker-lhzcn             worker
-             1m           14Mi
-gpu-operator                   gpu-operator-node-feature-discovery-worker-728hc             worker
-             1m           14Mi
-gpu-operator                   gpu-operator-node-feature-discovery-worker-vs8nt             worker
-             1m           14Mi
-livelink-system                reloader-647db4846c-6fpwc                                    reloader
-             1m           14Mi
-atlas-system                   rbac-manager-86976c7b6f-9pjdb                                rbac-manager                   1m           14Mi
-gpu-operator                   gpu-operator-node-feature-discovery-worker-6lmgs             worker
-             1m           13Mi
-emqx-operator                  emqx-operator-controller-manager-5477575666-z4b58            manager
-             1m           13Mi
-dynatrace-operator             dynatrace-fluent-bit-fzllg                                   fluent-bit                     2m           11Mi
-dynatrace-operator             dynatrace-fluent-bit-b6dtl                                   fluent-bit                     2m           10Mi
-dynatrace-operator             dynatrace-fluent-bit-zncps                                   fluent-bit                     2m           10Mi
-dynatrace-operator             dynatrace-fluent-bit-gjhr8                                   fluent-bit                     3m           9Mi
-dynatrace-operator             dynatrace-fluent-bit-dj5ff                                   fluent-bit                     3m           9Mi
-gpu-operator                   gpu-operator-node-feature-discovery-gc-bdbc64d47-rx2r7       gc
-             1m           9Mi
-vmware-system-auth             guest-cluster-auth-svc-mtkt7                                 guest-cluster-auth-service     1m           9Mi
-vmware-system-auth             guest-cluster-auth-svc-sg7jg                                 guest-cluster-auth-service     1m           8Mi
-vmware-system-auth             guest-cluster-auth-svc-glthd                                 guest-cluster-auth-service     1m           8Mi
-kube-system                    snapshot-controller-798c455795-n2fqg                         snapshot-controller            1m           8Mi
-gpu-operator                   nvidia-operator-validator-n22lc                              nvidia-operator-validator      0m           1Mi
-gpu-operator                   nvidia-operator-validator-h524m                              nvidia-operator-validator      0m           1Mi
-gpu-operator                   nvidia-operator-validator-rs7hh                              nvidia-operator-validator      1m           1Mi
-ami-svp                        netshoot01-5c4574d9f8-8fhbd                                  netshoot
-             4m           0Mi
-mesac2@CPC-mesac-4BM7S:~$ kubectl get pdb -A
-NAMESPACE            NAME                            MIN AVAILABLE   MAX UNAVAILABLE   ALLOWED DISRUPTIONS   AGE
-atlas-system         external-dns                    N/A             1                 1                     71d
-cert-manager         cert-manager                    1               N/A               1                     71d
-cert-manager         cert-manager-cainjector         1               N/A               1                     71d
-cert-manager         cert-manager-webhook            1               N/A               0                     71d
-dynatrace-operator   dynatrace-webhook               1               N/A               1                     71d
-kyverno-system       kyverno-admission-controller    1               N/A               2                     71d
-kyverno-system       kyverno-background-controller   1               N/A               1                     71d
-kyverno-system       kyverno-cleanup-controller      1               N/A               1                     71d
-kyverno-system       kyverno-reports-controller      1               N/A               1                     71d
+{
+  "replicas": 4,
+  "readyReplicas": 3,
+  "currentReplicas": null,
+  "podManagementPolicy": "OrderedReady",
+  "updateStrategy": {
+    "type": "OnDelete"
+  },
+  "affinity": {
+    "podAntiAffinity": {
+      "preferredDuringSchedulingIgnoredDuringExecution": [
+        {
+          "podAffinityTerm": {
+            "labelSelector": {
+              "matchLabels": {
+                "app.kubernetes.io/name": "hivemq-platform"
+              }
+            },
+            "topologyKey": "kubernetes.io/hostname"
+          },
+          "weight": 100
+        }
+      ]
+    }
+  },
+  "topologySpreadConstraints": null
+}
+mesac2@CPC-mesac-4BM7S:~$ kubectl -n livelink-hivemq describe pod livelink-hivemq-3
+Name:             livelink-hivemq-3
+Namespace:        livelink-hivemq
+Priority:         0
+Service Account:  hivemq-platform-pod-livelink-hivemq
+Node:             adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6/172.19.0.62
+Start Time:       Thu, 15 Oct 2026 15:47:52 +0000
+Labels:           app.kubernetes.io/instance=livelink-hivemq
+                  app.kubernetes.io/managed-by=Helm
+                  app.kubernetes.io/name=hivemq-platform
+                  app.kubernetes.io/version=4.50.0
+                  apps.kubernetes.io/pod-index=3
+                  controller-revision-hash=livelink-hivemq-5b69dc5847
+                  helm.sh/chart=hivemq-platform-0.2.65
+                  helm.toolkit.fluxcd.io/name=livelink-hivemq
+                  helm.toolkit.fluxcd.io/namespace=livelink-system
+                  hivemq-platform=livelink-hivemq
+                  statefulset.kubernetes.io/pod-name=livelink-hivemq-3
+Annotations:      dynakube.dynatrace.com/injected: true
+                  kubernetes-resource-versions: {broker-configuration-v2=-2089688360, env-var-secret-hivemq=28331699}
+                  meta.helm.sh/release-name: livelink-hivemq
+                  meta.helm.sh/release-namespace: livelink-hivemq
+                  metadata-enrichment.dynatrace.com/injected: true
+                  metadata.dynatrace.com: {}
+                  metadata.dynatrace.com/k8s.workload.kind: statefulset
+                  metadata.dynatrace.com/k8s.workload.name: livelink-hivemq
+                  oneagent.dynatrace.com/injected: true
+Status:           Pending
+IP:
+IPs:              <none>
+Controlled By:    StatefulSet/livelink-hivemq
+Init Containers:
+  hivemq-platform-operator-init:
+    Container ID:
+    Image:           case.artifacts.medtronic.com/ext-docker-hub-remote/hivemq/hivemq-platform-operator-init:1.7.2
+    Image ID:
+    Port:            <none>
+    Host Port:       <none>
+    SeccompProfile:  RuntimeDefault
+    State:           Waiting
+      Reason:        PodInitializing
+    Ready:           False
+    Restart Count:   0
+    Limits:
+      cpu:     250m
+      memory:  100Mi
+    Requests:
+      cpu:        250m
+      memory:     100Mi
+    Environment:  <none>
+    Mounts:
+      /hivemq from operator-init (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-9w8jq (ro)
+  dynatrace-operator:
+    Container ID:
+    Image:           case.artifacts.medtronic.com/ext-docker-aws-remote/dynatrace/dynatrace-operator:v1.9.0
+    Image ID:
+    Port:            <none>
+    Host Port:       <none>
+    SeccompProfile:  RuntimeDefault
+    Args:
+      bootstrap
+      --config-directory=/mnt/config
+      --input-directory=/mnt/input
+      --suppress-error
+      --source=/opt/dynatrace/oneagent
+      --target=/mnt/bin
+      --install-path=/opt/dynatrace/oneagent-paas
+      --attribute=k8s.workload.kind=statefulset
+      --attribute=k8s.workload.name=livelink-hivemq
+      --attribute=dt.kubernetes.workload.kind=statefulset
+      --attribute=dt.kubernetes.workload.name=livelink-hivemq
+      --metadata-enrichment
+      --attribute-container={"container_image.registry":"case.artifacts.medtronic.com","container_image.repository":"ext-docker-hub-remote/hivemq/hivemq4","container_image.tags":"k8s-4.42.0","k8s.container.name":"hivemq"}
+      --attribute=k8s.node.name=$(K8S_NODE_NAME)
+      --attribute=k8s.namespace.name=livelink-hivemq
+      --attribute=k8s.cluster.uid=728fa293-1692-4ed9-a786-b99e6b27650e
+      --attribute=k8s.cluster.name=adan1-atlas-prd
+      --attribute=dt.entity.kubernetes_cluster=KUBERNETES_CLUSTER-1EFC92E539F95C3C
+      --attribute=k8s.pod.name=$(K8S_PODNAME)
+      --attribute=k8s.pod.uid=$(K8S_PODUID)
+      --attribute=dt.kubernetes.cluster.id=728fa293-1692-4ed9-a786-b99e6b27650e
+    State:          Waiting
+      Reason:       PodInitializing
+    Ready:          False
+    Restart Count:  0
+    Limits:
+      cpu:     100m
+      memory:  60Mi
+    Requests:
+      cpu:     30m
+      memory:  30Mi
+    Environment:
+      K8S_PODNAME:    livelink-hivemq-3 (v1:metadata.name)
+      K8S_PODUID:      (v1:metadata.uid)
+      K8S_NODE_NAME:   (v1:spec.nodeName)
+    Mounts:
+      /mnt/bin from oneagent-bin (ro)
+      /mnt/config from dynatrace-config (rw)
+      /mnt/input from dynatrace-input (ro)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-9w8jq (ro)
+Containers:
+  hivemq:
+    Container ID:
+    Image:           case.artifacts.medtronic.com/ext-docker-hub-remote/hivemq/hivemq4:k8s-4.42.0
+    Image ID:
+    Ports:           1883/TCP, 8080/TCP, 9399/TCP
+    Host Ports:      0/TCP, 0/TCP, 0/TCP
+    SeccompProfile:  RuntimeDefault
+    Command:
+      /opt/hivemq/operator/bin/run.sh
+    State:          Waiting
+      Reason:       PodInitializing
+    Ready:          False
+    Restart Count:  0
+    Limits:
+      cpu:     4
+      memory:  8Gi
+    Requests:
+      cpu:      500m
+      memory:   2Gi
+    Liveness:   http-get http://:7979/liveness delay=15s timeout=1s period=30s #success=1 #failure=240
+    Readiness:  http-get http://:7979/readiness delay=3s timeout=1s period=5s #success=1 #failure=3
+    Environment:
+      JAVA_OPTS:                  -XX:+UnlockExperimentalVMOptions -XX:InitialRAMPercentage=50 -XX:MaxRAMPercentage=50
+      HIVEMQ_DATA_FOLDER:         /opt/hivemq/pvc/data
+      CONFLUENT_KAFKA_BOOTSTRAP:  <set to the key 'CONFLUENT_KAFKA_BOOTSTRAP' in secret 'hivemq'>  Optional: false
+      KAFKA_USERNAME:             <set to the key 'KAFKA_USERNAME' in secret 'hivemq'>             Optional: false
+      KAFKA_PASSWORD:             <set to the key 'KAFKA_PASSWORD' in secret 'hivemq'>             Optional: false
+      HIVEMQ_BIND_ADDRESS:         (v1:status.podIP)
+      DT_DEPLOYMENT_METADATA:     orchestration_tech=Operator-application_monitoring;script_version=v1.9.0;orchestrator_id=728fa293-1692-4ed9-a786-b99e6b27650e
+      LD_PRELOAD:                 /opt/dynatrace/oneagent-paas/agent/lib64/liboneagentproc.so
+      DT_STORAGE:                 /var/lib/dynatrace/oneagent
+    Mounts:
+      /etc/ld.so.preload from dynatrace-config (rw,path="oneagent/ld.so.preload")
+      /etc/podinfo/ from pod-info (rw)
+      /opt/dynatrace/oneagent-paas from oneagent-bin (ro)
+      /opt/hivemq/conf-k8s/ from broker-configuration (rw)
+      /opt/hivemq/extensions/hivemq-kafka-extension/conf/ from extension-configuration-hivemq-kafka-extension (rw)
+      /opt/hivemq/license from licenses (rw)
+      /opt/hivemq/operator/ from operator-init (rw)
+      /opt/hivemq/pvc from hivemq-data (rw)
+      /var/lib/dynatrace from dynatrace-config (rw,path="hivemq")
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-9w8jq (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   False
+  Initialized                 False
+  Ready                       False
+  ContainersReady             False
+  PodScheduled                True
+Volumes:
+  hivemq-data:
+    Type:       PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
+    ClaimName:  hivemq-data-livelink-hivemq-3
+    ReadOnly:   false
+  licenses:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  hivemq
+    Optional:    false
+  pod-info:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      hivemq-platform-livelink-hivemq-dynamic-state
+    Optional:  false
+  broker-configuration:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      hivemq-configuration-livelink-hivemq
+    Optional:  false
+  operator-init:
+    Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:
+    SizeLimit:  <unset>
+  extension-configuration-hivemq-kafka-extension:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      livelink-hivemq-kafka-ext-config
+    Optional:  false
+  kube-api-access-9w8jq:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    ConfigMapOptional:       <nil>
+    DownwardAPI:             true
+  oneagent-bin:
+    Type:              CSI (a Container Storage Interface (CSI) volume source)
+    Driver:            csi.oneagent.dynatrace.com
+    FSType:
+    ReadOnly:          true
+    VolumeAttributes:      dynakube=adan1-atlas-prd
+                           mode=app
+                           retryTimeout=10m0s
+  dynatrace-input:
+    Type:                Projected (a volume that contains injected data from multiple sources)
+    SecretName:          dynatrace-bootstrapper-config
+    SecretOptionalName:  0xc000b9e985
+    SecretName:          dynatrace-bootstrapper-certs
+    SecretOptionalName:  0xc000b9e986
+  dynatrace-config:
+    Type:        EmptyDir (a temporary directory that shares a pod's lifetime)
+    Medium:
+    SizeLimit:   <unset>
+QoS Class:       Burstable
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type     Reason                  Age                   From                     Message
+  ----     ------                  ----                  ----                     -------
+  Normal   Scheduled               50m                   default-scheduler        Successfully assigned livelink-hivemq/livelink-hivemq-3 to adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6
+  Warning  FailedAttachVolume      48m                   attachdetach-controller  AttachVolume.Attach failed for volume "pvc-d1a2fffa-df71-481a-9c4b-618a9aff1480" : timed out waiting for external-attacher of csi.vsphere.vmware.com CSI driver to attach volume 62154bef-a910-4745-8fc3-5da84babc2a8-d1a2fffa-df71-481a-9c4b-618a9aff1480
+  Normal   SuccessfulAttachVolume  47m                   attachdetach-controller  AttachVolume.Attach succeeded for volume "pvc-d1a2fffa-df71-481a-9c4b-618a9aff1480"
+  Warning  FailedMount             16m                   kubelet                  MountVolume.SetUp failed for volume "broker-configuration" : failed to sync configmap cache: timed out waiting for the condition
+  Warning  FailedMount             16m                   kubelet                  MountVolume.SetUp failed for volume "extension-configuration-hivemq-kafka-extension" : failed to sync configmap cache: timed out waiting for the condition
+  Warning  FailedMount             16m                   kubelet                  MountVolume.SetUp failed for volume "pod-info" : failed to sync configmap cache: timed out waiting for the condition
+  Warning  FailedMount             16m                   kubelet                  MountVolume.SetUp failed for volume "licenses" : failed to sync secret cache: timed out waiting for the condition
+  Warning  FailedMount             16m                   kubelet                  MountVolume.SetUp failed for volume "dynatrace-input" : failed to sync secret cache: timed out waiting for the condition
+  Warning  FailedMount             16m                   kubelet                  MountVolume.SetUp failed for volume "kube-api-access-9w8jq" : failed to sync configmap cache: timed out waiting for the condition
+  Warning  FailedMount             2m20s (x30 over 48m)  kubelet                  MountVolume.SetUp failed for volume "oneagent-bin" : kubernetes.io/csi: mounter.SetUpAt failed to determine if the node service has VOLUME_MOUNT_GROUP capability: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial unix /var/lib/kubelet/plugins/csi.oneagent.dynatrace.com/csi.sock: connect: no such file or directory"
 mesac2@CPC-mesac-4BM7S:~$
