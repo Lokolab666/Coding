@@ -1,166 +1,183 @@
-Look the next issue and my commands, the suggestion of my leader
 
-1. Context
-Hi Merrick, Wesley/Eragam Reddy, Mounika,
-In adan1-atlas-prd cluster the envoy-oee-gateway-67t2p in the livelink-system namespace has been in Pending state
-sunkas6@CPC-sunka-A5WCX:~$ kubectl get pods -n livelink-system
-NAME                                   READY   STATUS    RESTARTS   AGE
-envoy-oee-gateway-67t2p                0/2     Pending   0          3d14h
-Pod is not being scheduled to any node
- 
-Events:
-  Type     Reason            Age                      From               Message
-  ----     ------            ----                     ----               -------
-  Warning  FailedScheduling  101s (x1059 over 3d14h)  default-scheduler  0/9 nodes are available: 1 Insufficient memory, 8 node(s) didn't satisfy plugin(s) [NodeAffinity]. no new claims to deallocate, preemption: 0/9 nodes are available: 1 No preemption victims found for incoming pod, 8 Preemption is not helpful for scheduling
-The Envoy DaemonSet is scheduled only on a limited set of eligible nodes. Two Envoy pods are running successfully:
-adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-9s8g7
-adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-bx9ct
+      Worked for 2m 12s
 
-The third eligible node, adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6, is unable to accommodate the pod due to memory constraints.
+Revisé el archivo. La causa está bastante clara: el pod de Envoy no inicia porque el nodo asignado no tiene memoria disponible a nivel de requests, aunque el nodo no tenga MemoryPressure.
 
-Could you please review the node affinity configuration and memory allocation strategy for the gateway nodes, and advise on the recommended remediation (capacity increase, workload redistribution, or affinity adjustment) to allow the pending Envoy pod to be scheduled?
-sunkas6@CPC-sunka-A5WCX:~$ kubectl describe node adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6 | egrep "Allocatable:|memory"
-  MemoryPressure           False   Wed, 14 Oct 2026 07:00:30 +0000   Sat, 10 Oct 2026 16:11:19 +0000   KubeletHasSufficientMemory   kubelet has sufficient memory available
-  memory:             32862028Ki
-Allocatable:
-  memory:             29069132Ki
-  memory             28376Mi (99%)  39168Mi (137%)
- 
+Nodo afectado: adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6
 
-2. My leader reply:
-We need to adjust the priority class for the gateway, or at the very least evict something claiming a lot of memory on the note that pod has its affinity set to
- 
-DaemonSet deploys one pod to each node, so that particular pod can only schedule to one node exactly, which has all its memory claimed (memory requests from all running pods totals too high for this one to be added)
- 
-I won't be able to work on that myself with my current OpenShift tasking for the foreseeable future, so I'll leave this up to this team on how you want to address this
- 
-PriorityClass can probably be added to our ContourDeployment spec here (this is the dev branch so feel free to test changes there) https://code.medtronic.com/io-shared-services/applications/helm-common-resources/-/blob/atlas-tkg-dev-resources/common-resources/templates/contour/gatewayclass.yaml?ref_type=heads
- 
-The YAML file is (in /atlas-tkg-dev-resources branch):
-{{- if and (eq .Values.cluster.provider "tkg") .Values.contour.gatewayProvisioner.enabled }}
-kind: GatewayClass
-apiVersion: gateway.networking.k8s.io/v1beta1
-metadata:
-  name: contour
-spec:
-  controllerName: projectcontour.io/gateway-controller
-  parametersRef:
-    kind: ContourDeployment
-    group: projectcontour.io
-    name: contour-and-envoy-params
-    namespace: contour-system
+Memoria allocatable: aproximadamente 28,387.8 Mi
 
----
-kind: ContourDeployment
-apiVersion: projectcontour.io/v1alpha1
-metadata:
-  namespace: contour-system
-  name: contour-and-envoy-params
-spec:
-  contour:
-    resources:
-      limits:
-        memory: 256Mi
-      requests:
-        cpu: 25m
-        memory: 50Mi
-  envoy:
-    resources:
-      limits:
-        memory: 256Mi
-      requests:
-        cpu: 25m
-        memory: 50Mi
-{{- end }}
+Requests actuales: 28,376 Mi
 
-3. My kubectl commands and the output:
-mesac2@CPC-mesac-4BM7S:~$ kubectl describe node adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6
-Name:               adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6
-Roles:              <none>
-Labels:             beta.kubernetes.io/arch=amd64
-                    beta.kubernetes.io/os=linux
-                    failure-domain.beta.kubernetes.io/zone=vmware-system-legacy
-                    feature.node.kubernetes.io/cpu-cpuid.ADX=true
-                    feature.node.kubernetes.io/cpu-cpuid.AESNI=true
-                    feature.node.kubernetes.io/cpu-cpuid.AMXFP8=true
-                    feature.node.kubernetes.io/cpu-cpuid.AVX=true
-                    feature.node.kubernetes.io/cpu-cpuid.AVX2=true
-                    feature.node.kubernetes.io/cpu-cpuid.AVX512BITALG=true
-                    feature.node.kubernetes.io/cpu-cpuid.AVX512BW=true
-                    feature.node.kubernetes.io/cpu-cpuid.AVX512CD=true
-                    feature.node.kubernetes.io/cpu-cpuid.AVX512DQ=true
-                    feature.node.kubernetes.io/cpu-cpuid.AVX512F=true
-                    feature.node.kubernetes.io/cpu-cpuid.AVX512IFMA=true
-                    feature.node.kubernetes.io/cpu-cpuid.AVX512VBMI=true
-                    feature.node.kubernetes.io/cpu-cpuid.AVX512VBMI2=true
-                    feature.node.kubernetes.io/cpu-cpuid.AVX512VL=true
-                    feature.node.kubernetes.io/cpu-cpuid.AVX512VNNI=true
-                    feature.node.kubernetes.io/cpu-cpuid.AVX512VPOPCNTDQ=true
-                    feature.node.kubernetes.io/cpu-cpuid.CMPXCHG8=true
-                    feature.node.kubernetes.io/cpu-cpuid.FLUSH_L1D=true
-                    feature.node.kubernetes.io/cpu-cpuid.FMA3=true
-                    feature.node.kubernetes.io/cpu-cpuid.FSRM=true
-                    feature.node.kubernetes.io/cpu-cpuid.FXSR=true
-                    feature.node.kubernetes.io/cpu-cpuid.FXSROPT=true
-                    feature.node.kubernetes.io/cpu-cpuid.GFNI=true
-                    feature.node.kubernetes.io/cpu-cpuid.HYPERVISOR=true
-                    feature.node.kubernetes.io/cpu-cpuid.IA32_ARCH_CAP=true
-                    feature.node.kubernetes.io/cpu-cpuid.IBPB=true
-                    feature.node.kubernetes.io/cpu-cpuid.LAHF=true
-                    feature.node.kubernetes.io/cpu-cpuid.MD_CLEAR=true
-                    feature.node.kubernetes.io/cpu-cpuid.MOVBE=true
-                    feature.node.kubernetes.io/cpu-cpuid.OSXSAVE=true
-                    feature.node.kubernetes.io/cpu-cpuid.PSFD=true
-                    feature.node.kubernetes.io/cpu-cpuid.SHA=true
-                    feature.node.kubernetes.io/cpu-cpuid.SPEC_CTRL_SSBD=true
-                    feature.node.kubernetes.io/cpu-cpuid.STIBP=true
-                    feature.node.kubernetes.io/cpu-cpuid.SYSCALL=true
-                    feature.node.kubernetes.io/cpu-cpuid.SYSEE=true
-                    feature.node.kubernetes.io/cpu-cpuid.VAES=true
-                    feature.node.kubernetes.io/cpu-cpuid.VPCLMULQDQ=true
-                    feature.node.kubernetes.io/cpu-cpuid.WBNOINVD=true
-                    feature.node.kubernetes.io/cpu-cpuid.X87=true
-                    feature.node.kubernetes.io/cpu-cpuid.XGETBV1=true
-                    feature.node.kubernetes.io/cpu-cpuid.XSAVE=true
-                    feature.node.kubernetes.io/cpu-cpuid.XSAVEC=true
-                    feature.node.kubernetes.io/cpu-cpuid.XSAVEOPT=true
-                    feature.node.kubernetes.io/cpu-cpuid.XSAVES=true
-                    feature.node.kubernetes.io/cpu-hardware_multithreading=false
-                    feature.node.kubernetes.io/cpu-model.family=6
-                    feature.node.kubernetes.io/cpu-model.id=106
-                    feature.node.kubernetes.io/cpu-model.vendor_id=Intel
-                    feature.node.kubernetes.io/kernel-config.NO_HZ=true
-                    feature.node.kubernetes.io/kernel-config.NO_HZ_IDLE=true
-                    feature.node.kubernetes.io/kernel-version.full=5.15.0-160-generic
-                    feature.node.kubernetes.io/kernel-version.major=5
-                    feature.node.kubernetes.io/kernel-version.minor=15
-                    feature.node.kubernetes.io/kernel-version.revision=0
-                    feature.node.kubernetes.io/pci-15ad.present=true
-                    feature.node.kubernetes.io/system-os_release.ID=ubuntu
-                    feature.node.kubernetes.io/system-os_release.VERSION_ID=22.04
-                    feature.node.kubernetes.io/system-os_release.VERSION_ID.major=22
-                    feature.node.kubernetes.io/system-os_release.VERSION_ID.minor=04
-                    kubernetes.io/arch=amd64
-                    kubernetes.io/hostname=adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6
-                    kubernetes.io/os=linux
-                    node.cluster.x-k8s.io/esxi-host=adan1-esxi06.corp.medtronic.com
-                    run.tanzu.vmware.com/kubernetesDistributionVersion=v1.34.1---vmware.1-vkr.4
-                    run.tanzu.vmware.com/tkr=v1.34.1---vmware.1-vkr.4
-                    topology.kubernetes.io/zone=vmware-system-legacy
-                    vks.vmware.com/nodepool=worker-node-pool
-Annotations:        alpha.kubernetes.io/provided-node-ip: 172.19.0.62
-                    cluster.x-k8s.io/annotations-from-machine:
-                    cluster.x-k8s.io/cluster-name: adan1-atlas-prd
-                    cluster.x-k8s.io/cluster-namespace: adan1-prod-ns
-                    cluster.x-k8s.io/labels-from-machine: node.cluster.x-k8s.io/esxi-host
-                    cluster.x-k8s.io/machine: adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6
-                    cluster.x-k8s.io/owner-kind: MachineSet
-                    cluster.x-k8s.io/owner-name: adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk
-                    csi.volume.kubernetes.io/nodeid:
-                      {"csi.oneagent.dynatrace.com":"adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6","csi.vsphere.vmware.com":"adan1-atlas-prd-worker-node-p...
-                    machine-agent.vks.vmware.com/last-applied-config: 2026-10-10T16:11:22Z
-                    nfd.node.kubernetes.io/feature-labels:
-                      cpu-cpuid.ADX,cpu-cpuid.AESNI,cpu-cpuid.AMXFP8,cpu-cpuid.AVX,cpu-cpuid.AVX2,cpu-cpuid.AVX512BITALG,cpu-cpuid.AVX512BW,cpu-cpuid.AVX512CD,c...
+Espacio restante: aproximadamente 11.8 Mi
+
+Envoy necesita: 100 Mi
+
+Déficit: aproximadamente 88 Mi
+
+
+El mensaje 8 NodeAffinity es esperado para un pod creado por un DaemonSet: Kubernetes fija cada pod del DaemonSet a su nodo correspondiente. No debes eliminar esa afinidad del pod. 
+
+Qué recomiendo hacer
+
+1. Validar la configuración real del DaemonSet
+
+NS=livelink-system
+POD=envoy-oee-gateway-67t2p
+NODE=adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6
+
+kubectl -n "$NS" get pod "$POD" \
+  -o jsonpath='{.metadata.ownerReferences[0].kind}{" "}{.metadata.ownerReferences[0].name}{"\n"}'
+
+DS=$(kubectl -n "$NS" get pod "$POD" \
+  -o jsonpath='{.metadata.ownerReferences[0].name}')
+
+kubectl -n "$NS" get ds "$DS" -o json |
+jq '{
+  nodeSelector: .spec.template.spec.nodeSelector,
+  affinity: .spec.template.spec.affinity,
+  tolerations: .spec.template.spec.tolerations,
+  priorityClassName: .spec.template.spec.priorityClassName,
+  requests: [.spec.template.spec.containers[] |
+    {name: .name, requests: .resources.requests}]
+}'
+
+Esto confirma qué nodos son realmente elegibles y si existe alguna PriorityClass.
+
+2. Encontrar un workload seguro para reubicar
+
+Primero revisa todos los pods del nodo:
+
+kubectl get pods -A --field-selector spec.nodeName="$NODE" -o json |
+jq -r '.items[] | [
+  .metadata.namespace,
+  .metadata.name,
+  (.metadata.ownerReferences[0].kind // "-"),
+  (.metadata.ownerReferences[0].name // "-"),
+  (.spec.priority // 0),
+  ([.spec.containers[].resources.requests.memory // "0"] | join("+"))
+] | @tsv' | column -t
+
+kubectl top node "$NODE"
+kubectl top pods -A --containers --sort-by=memory
+kubectl get pdb -A
+
+Busca preferentemente un pod:
+
+Stateless.
+
+Con múltiples réplicas.
+
+Con request de memoria superior a 100Mi.
+
+Sin un PDB que impida moverlo.
+
+Que pueda ejecutarse en otro nodo.
+
+
+Mover un workload stateless es menos riesgoso que eliminar una réplica PostgreSQL.
+
+3. Si es necesario mover un pod
+
+Hazlo solamente después de confirmar el propietario, las réplicas, el PDB y la capacidad del nodo destino:
+
+kubectl cordon "$NODE"
+
+kubectl -n <namespace> delete pod <approved-stateless-pod>
+
+kubectl -n <namespace> get pods -o wide -w
+kubectl -n livelink-system get pods -o wide -w
+
+Una vez que el workload y Envoy estén Running:
+
+kubectl uncordon "$NODE"
+
+kubectl -n livelink-system get ds,pods -o wide
+kubectl describe node "$NODE" | sed -n '/Allocated resources:/,/Events:/p'
+
+No eliminaría todavía ami-mde-db-mde-prd-cluster-2. Kubernetes podría recrearlo en el mismo nodo, y eliminar directamente un pod de CloudNativePG puede evitar las protecciones del PDB. Eso requiere aprobación y procedimiento del equipo de base de datos. 
+
+4. Revisar CloudNativePG
+
+for ns in ami-mde-db livelink-db; do
+  kubectl -n "$ns" get clusters.postgresql.cnpg.io -o json |
+  jq -r '.items[] | [
+    .metadata.name,
+    (.spec.affinity.enablePodAntiAffinity // true),
+    (.spec.affinity.podAntiAffinityType // "preferred"),
+    (.spec.affinity.topologyKey // "kubernetes.io/hostname"),
+    (.spec.affinity.nodeSelector // {})
+  ] | @json'
+done
+
+kubectl get storageclass
+kubectl get pv -o wide
+kubectl get pdb -A | grep -E 'ami-mde|livelink'
+
+Actualmente existen problemas de distribución:
+
+Las dos réplicas de livelink-db-01 están en xq6j6.
+
+Las dos réplicas de ami-mde están en xq6j6.
+
+Algunos primarios y réplicas están juntos en bx9ct.
+
+Todos los cinco primarios están concentrados en bx9ct.
+
+
+CloudNativePG usa normalmente anti-affinity preferred; cambiarla a required mejora la separación, pero puede dejar instancias Pending si no existe capacidad suficiente. 
+
+Solución permanente recomendada
+
+El orden correcto sería:
+
+1. Aumentar la capacidad del worker pool —idealmente agregar otro nodo— mediante el repositorio GitOps de adan1-atlas-prd.
+
+
+2. Redistribuir las instancias PostgreSQL con participación del equipo DBA.
+
+
+3. Configurar anti-affinity o topology spreading declarativamente.
+
+
+4. Revisar y ajustar los memory requests sobredimensionados.
+
+
+5. Crear alertas cuando los requests superen 80–85% de la capacidad.
+
+
+6. Evaluar una PriorityClass para Envoy únicamente como protección futura.
+
+
+
+No implementaría ahora priorityClassName en ContourDeployment: el CRD instalado no expone ese campo. Además, una prioridad de 1000 podría desalojar cualquier workload de prioridad 0; los PDB se respetan solamente como mejor esfuerzo durante preemption. 
+
+Conclusión: libera al menos 100Mi moviendo un pod stateless aprobado para recuperar Envoy; después agrega capacidad y corrige la distribución de CloudNativePG. La PriorityClass no es la solución inmediata y no crea memoria adicional.
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      cpu-cpuid.ADX,cpu-cpuid.AESNI,cpu-cpuid.AMXFP8,cpu-cpuid.AVX,cpu-cpuid.AVX2,cpu-cpuid.AVX512BITALG,cpu-cpuid.AVX512BW,cpu-cpuid.AVX512CD,c...
                     node.alpha.kubernetes.io/ttl: 0
                     volumes.kubernetes.io/controller-managed-attach-detach: true
 CreationTimestamp:  Sat, 10 Oct 2026 16:11:19 +0000
