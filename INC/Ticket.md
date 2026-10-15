@@ -1,38 +1,9 @@
-
-      Worked for 2m 12s
-
-Revisé el archivo. La causa está bastante clara: el pod de Envoy no inicia porque el nodo asignado no tiene memoria disponible a nivel de requests, aunque el nodo no tenga MemoryPressure.
-
-Nodo afectado: adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6
-
-Memoria allocatable: aproximadamente 28,387.8 Mi
-
-Requests actuales: 28,376 Mi
-
-Espacio restante: aproximadamente 11.8 Mi
-
-Envoy necesita: 100 Mi
-
-Déficit: aproximadamente 88 Mi
-
-
-El mensaje 8 NodeAffinity es esperado para un pod creado por un DaemonSet: Kubernetes fija cada pod del DaemonSet a su nodo correspondiente. No debes eliminar esa afinidad del pod. 
-
-Qué recomiendo hacer
-
-1. Validar la configuración real del DaemonSet
-
-NS=livelink-system
-POD=envoy-oee-gateway-67t2p
-NODE=adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6
-
-kubectl -n "$NS" get pod "$POD" \
-  -o jsonpath='{.metadata.ownerReferences[0].kind}{" "}{.metadata.ownerReferences[0].name}{"\n"}'
-
-DS=$(kubectl -n "$NS" get pod "$POD" \
+     
+       kubectl -n "$NS" get pod "$POD"   -o jsonpath='{.metadata.ownerReferences[0].kind}{" "}{.metadata.ownerReferences[0].name}{"\n"}'
+DaemonSet envoy-oee-gateway
+mesac2@CPC-mesac-4BM7S:~$ DS=$(kubectl -n "$NS" get pod "$POD" \
   -o jsonpath='{.metadata.ownerReferences[0].name}')
-
-kubectl -n "$NS" get ds "$DS" -o json |
+mesac2@CPC-mesac-4BM7S:~$ kubectl -n "$NS" get ds "$DS" -o json |
 jq '{
   nodeSelector: .spec.template.spec.nodeSelector,
   affinity: .spec.template.spec.affinity,
@@ -41,14 +12,31 @@ jq '{
   requests: [.spec.template.spec.containers[] |
     {name: .name, requests: .resources.requests}]
 }'
+{
+  "nodeSelector": null,
+  "affinity": null,
+  "tolerations": null,
+  "priorityClassName": null,
+  "requests": [
+    {
+      "name": "shutdown-manager",
+      "requests": {
+        "cpu": "25m",
+        "memory": "50Mi"
+      }
+    },
+    {
+      "name": "envoy",
+      "requests": {
+        "cpu": "25m",
+        "memory": "50Mi"
+      }
+    }
+  ]
+}
 
-Esto confirma qué nodos son realmente elegibles y si existe alguna PriorityClass.
 
-2. Encontrar un workload seguro para reubicar
-
-Primero revisa todos los pods del nodo:
-
-kubectl get pods -A --field-selector spec.nodeName="$NODE" -o json |
+ kubectl get pods -A --field-selector spec.nodeName="$NODE" -o json |
 jq -r '.items[] | [
   .metadata.namespace,
   .metadata.name,
@@ -57,531 +45,343 @@ jq -r '.items[] | [
   (.spec.priority // 0),
   ([.spec.containers[].resources.requests.memory // "0"] | join("+"))
 ] | @tsv' | column -t
-
-kubectl top node "$NODE"
-kubectl top pods -A --containers --sort-by=memory
-kubectl get pdb -A
-
-Busca preferentemente un pod:
-
-Stateless.
-
-Con múltiples réplicas.
-
-Con request de memoria superior a 100Mi.
-
-Sin un PDB que impida moverlo.
-
-Que pueda ejecutarse en otro nodo.
-
-
-Mover un workload stateless es menos riesgoso que eliminar una réplica PostgreSQL.
-
-3. Si es necesario mover un pod
-
-Hazlo solamente después de confirmar el propietario, las réplicas, el PDB y la capacidad del nodo destino:
-
-kubectl cordon "$NODE"
-
-kubectl -n <namespace> delete pod <approved-stateless-pod>
-
-kubectl -n <namespace> get pods -o wide -w
-kubectl -n livelink-system get pods -o wide -w
-
-Una vez que el workload y Envoy estén Running:
-
-kubectl uncordon "$NODE"
-
-kubectl -n livelink-system get ds,pods -o wide
-kubectl describe node "$NODE" | sed -n '/Allocated resources:/,/Events:/p'
-
-No eliminaría todavía ami-mde-db-mde-prd-cluster-2. Kubernetes podría recrearlo en el mismo nodo, y eliminar directamente un pod de CloudNativePG puede evitar las protecciones del PDB. Eso requiere aprobación y procedimiento del equipo de base de datos. 
-
-4. Revisar CloudNativePG
-
-for ns in ami-mde-db livelink-db; do
-  kubectl -n "$ns" get clusters.postgresql.cnpg.io -o json |
-  jq -r '.items[] | [
-    .metadata.name,
-    (.spec.affinity.enablePodAntiAffinity // true),
-    (.spec.affinity.podAntiAffinityType // "preferred"),
-    (.spec.affinity.topologyKey // "kubernetes.io/hostname"),
-    (.spec.affinity.nodeSelector // {})
-  ] | @json'
-done
-
-kubectl get storageclass
-kubectl get pv -o wide
-kubectl get pdb -A | grep -E 'ami-mde|livelink'
-
-Actualmente existen problemas de distribución:
-
-Las dos réplicas de livelink-db-01 están en xq6j6.
-
-Las dos réplicas de ami-mde están en xq6j6.
-
-Algunos primarios y réplicas están juntos en bx9ct.
-
-Todos los cinco primarios están concentrados en bx9ct.
-
-
-CloudNativePG usa normalmente anti-affinity preferred; cambiarla a required mejora la separación, pero puede dejar instancias Pending si no existe capacidad suficiente. 
-
-Solución permanente recomendada
-
-El orden correcto sería:
-
-1. Aumentar la capacidad del worker pool —idealmente agregar otro nodo— mediante el repositorio GitOps de adan1-atlas-prd.
-
-
-2. Redistribuir las instancias PostgreSQL con participación del equipo DBA.
-
-
-3. Configurar anti-affinity o topology spreading declarativamente.
-
-
-4. Revisar y ajustar los memory requests sobredimensionados.
-
-
-5. Crear alertas cuando los requests superen 80–85% de la capacidad.
-
-
-6. Evaluar una PriorityClass para Envoy únicamente como protección futura.
-
-
-
-No implementaría ahora priorityClassName en ContourDeployment: el CRD instalado no expone ese campo. Además, una prioridad de 1000 podría desalojar cualquier workload de prioridad 0; los PDB se respetan solamente como mejor esfuerzo durante preemption. 
-
-Conclusión: libera al menos 100Mi moviendo un pod stateless aprobado para recuperar Envoy; después agrega capacidad y corrige la distribución de CloudNativePG. La PriorityClass no es la solución inmediata y no crea memoria adicional.
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      cpu-cpuid.ADX,cpu-cpuid.AESNI,cpu-cpuid.AMXFP8,cpu-cpuid.AVX,cpu-cpuid.AVX2,cpu-cpuid.AVX512BITALG,cpu-cpuid.AVX512BW,cpu-cpuid.AVX512CD,c...
-                    node.alpha.kubernetes.io/ttl: 0
-                    volumes.kubernetes.io/controller-managed-attach-detach: true
-CreationTimestamp:  Sat, 10 Oct 2026 16:11:19 +0000
-Taints:             <none>
-Unschedulable:      false
-Lease:              Failed to get lease: leases.coordination.k8s.io "adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6" is forbidden: User "sso:mesac2@ent.core.medtronic.com" cannot get resource "leases" in API group "coordination.k8s.io" in the namespace "kube-node-lease"
-Conditions:
-  Type                     Status  LastHeartbeatTime                 LastTransitionTime                Reason                       Message
-  ----                     ------  -----------------                 ------------------                ------                       -------
-  MemoryPressure           False   Wed, 14 Oct 2026 16:06:25 +0000   Sat, 10 Oct 2026 16:11:19 +0000   KubeletHasSufficientMemory   kubelet has sufficient memory available
-  DiskPressure             False   Wed, 14 Oct 2026 16:06:25 +0000   Sat, 10 Oct 2026 16:11:19 +0000   KubeletHasNoDiskPressure     kubelet has no disk pressure
-  PIDPressure              False   Wed, 14 Oct 2026 16:06:25 +0000   Sat, 10 Oct 2026 16:11:19 +0000   KubeletHasSufficientPID      kubelet has sufficient PID available
-  Ready                    True    Wed, 14 Oct 2026 16:06:25 +0000   Sat, 10 Oct 2026 16:11:25 +0000   KubeletReady                 kubelet is posting ready status
-  MachineConfigOutOfDate   False   Mon, 01 Jan 0001 00:00:00 +0000   Sat, 10 Oct 2026 16:11:22 +0000   Success                      Machineadm configuration applied successfully
-Addresses:
-  InternalIP:  172.19.0.62
-  Hostname:
-Capacity:
-  cpu:                8
-  ephemeral-storage:  25625808Ki
-  hugepages-1Gi:      0
-  hugepages-2Mi:      0
-  memory:             32862028Ki
-  pods:               110
-Allocatable:
-  cpu:                7915m
-  ephemeral-storage:  23616744614
-  hugepages-1Gi:      0
-  hugepages-2Mi:      0
-  memory:             29069132Ki
-  pods:               110
-System Info:
-  Machine ID:                 f47cc80a4b7f49db8b3d4dcc49db322b
-  System UUID:                fd491342-9c28-ea8e-aeb7-8a85d1cecaf8
-  Boot ID:                    e7987eae-f1b7-4881-a1d8-b4f2bbd60380
-  Kernel Version:             5.15.0-160-generic
-  OS Image:                   Ubuntu 22.04.5 LTS
-  Operating System:           linux
-  Architecture:               amd64
-  Container Runtime Version:  containerd://2.1.4+vmware.3-fips
-  Kubelet Version:            v1.34.1+vmware.1
-  Kube-Proxy Version:
-PodCIDR:                      100.64.18.0/24
-PodCIDRs:                     100.64.18.0/24
-ProviderID:                   vsphere://421349fd-289c-8eea-aeb7-8a85d1cecaf8
-Non-terminated Pods:          (49 in total)
-  Namespace                   Name                                                      CPU Requests  CPU Limits   Memory Requests  Memory Limits  Age
-  ---------                   ----                                                      ------------  ----------   ---------------  -------------  ---
-  ami-mde-db                  ami-mde-db-mde-prd-cluster-1                              100m (1%)     100m (1%)    2Gi (7%)         2Gi (7%)       3d23h
-  ami-mde-db                  ami-mde-db-mde-prd-cluster-2                              100m (1%)     100m (1%)    2Gi (7%)         2Gi (7%)       3d23h
-  atlas-system                kubescape-node-agent-wvcjj                                100m (1%)     500m (6%)    180Mi (0%)       700Mi (2%)     3d23h
-  atlas-system                kubescape-storage-87b86b58f-q2tgg                         100m (1%)     1500m (18%)  400Mi (1%)       1500Mi (5%)    5d12h
-  atlas-system                rbac-manager-86976c7b6f-9l9jz                             100m (1%)     100m (1%)    128Mi (0%)       128Mi (0%)     5d12h
-  cert-manager                cert-manager-65bb4b7446-4hk68                             100m (1%)     0 (0%)       200Mi (0%)       512Mi (1%)     5d12h
-  cert-manager                cert-manager-65bb4b7446-vfqzg                             100m (1%)     0 (0%)       200Mi (0%)       512Mi (1%)     5d12h
-  cert-manager                cert-manager-cainjector-5877b687dc-4rsms                  10m (0%)      0 (0%)       64Mi (0%)        128Mi (0%)     5d12h
-  cert-manager                cert-manager-cainjector-5877b687dc-g8bgx                  10m (0%)      0 (0%)       64Mi (0%)        128Mi (0%)     5d12h
-  cert-manager                cert-manager-webhook-5c564bbfcd-2vwnh                     10m (0%)      0 (0%)       32Mi (0%)        32Mi (0%)      5d12h
-  cert-manager                cert-manager-webhook-5c564bbfcd-6tkjx                     10m (0%)      0 (0%)       32Mi (0%)        32Mi (0%)      5d12h
-  cert-manager                cert-manager-webhook-5c564bbfcd-sv9hh                     10m (0%)      0 (0%)       32Mi (0%)        32Mi (0%)      5d12h
-  cnpg-system                 cloudnative-pg-75d7696cb5-rvpr2                           100m (1%)     0 (0%)       256Mi (0%)       256Mi (0%)     5d12h
-  cnpg-system                 cloudnative-pg-75d7696cb5-wlz8k                           100m (1%)     0 (0%)       256Mi (0%)       256Mi (0%)     5d12h
-  confluent-system            confluent-operator-77f55d5978-drtbv                       100m (1%)     500m (6%)    256Mi (0%)       512Mi (1%)     5d12h
-  confluent-system            confluent-operator-77f55d5978-rqxrj                       100m (1%)     500m (6%)    256Mi (0%)       512Mi (1%)     5d12h
-  confluent-system            confluent-operator-77f55d5978-tlvhk                       100m (1%)     500m (6%)    256Mi (0%)       512Mi (1%)     5d12h
-  contour-system              contour-contour-88c7c6c9b-qrcnl                           100m (1%)     150m (1%)    128Mi (0%)       192Mi (0%)     5d12h
-  contour-system              contour-envoy-l5xbs                                       200m (2%)     300m (3%)    256Mi (0%)       384Mi (1%)     3d23h
-  contour-system              contour-gateway-provisioner-68d5bd54dc-4flnv              100m (1%)     0 (0%)       128Mi (0%)       256Mi (0%)     5d12h
-  dynatrace-operator          adan1-atlas-prd-activegate-0                              250m (3%)     0 (0%)       768Mi (2%)       2Gi (7%)       5d12h
-  dynatrace-operator          adan1-atlas-prd-otel-collector-0                          0 (0%)        0 (0%)       0 (0%)           0 (0%)         5d12h
-  dynatrace-operator          dynatrace-fluent-bit-h4bnb                                100m (1%)     0 (0%)       128Mi (0%)       128Mi (0%)     3d23h
-  dynatrace-operator          dynatrace-oneagent-csi-driver-477zn                       190m (2%)     90m (1%)     260Mi (0%)       360Mi (1%)     3d23h
-  dynatrace-operator          dynatrace-webhook-86457b7fc7-qq575                        300m (3%)     300m (3%)    128Mi (0%)       128Mi (0%)     5d12h
-  dynatrace-operator          dynatrace-webhook-86457b7fc7-tzb7c                        300m (3%)     300m (3%)    128Mi (0%)       128Mi (0%)     5d12h
-  external-secrets            external-secrets-55777f75bd-8pmvd                         100m (1%)     0 (0%)       128Mi (0%)       128Mi (0%)     5d12h
-  external-secrets            external-secrets-webhook-c566b5766-gfkht                  10m (0%)      0 (0%)       32Mi (0%)        64Mi (0%)      5d12h
-  flux-system                 helm-controller-6d98cf5d6-4rnrh                           100m (1%)     1 (12%)      64Mi (0%)        1Gi (3%)       5d12h
-  flux-system                 kustomize-controller-5f7c645849-wrdfr                     100m (1%)     1 (12%)      64Mi (0%)        1Gi (3%)       5d12h
-  flux-system                 source-controller-7c74d5c6d8-cq4zm                        50m (0%)      1 (12%)      64Mi (0%)        1Gi (3%)       5d12h
-  gpu-operator                gpu-operator-node-feature-discovery-gc-bdbc64d47-45l6t    10m (0%)      0 (0%)       128Mi (0%)       1Gi (3%)       5d12h
-  gpu-operator                gpu-operator-node-feature-discovery-worker-prrfl          5m (0%)       0 (0%)       64Mi (0%)        512Mi (1%)     3d23h
-  kube-system                 antrea-agent-9zpqt                                        200m (2%)     0 (0%)       0 (0%)           0 (0%)         3d23h
-  kube-system                 kube-proxy-zh44f                                          0 (0%)        0 (0%)       0 (0%)           0 (0%)         3d23h
-  kyverno-system              kyverno-admission-controller-5655b8f7fc-hqwpb             100m (1%)     100m (1%)    128Mi (0%)       384Mi (1%)     5d12h
-  kyverno-system              kyverno-admission-controller-5655b8f7fc-vwwbf             100m (1%)     100m (1%)    128Mi (0%)       384Mi (1%)     5d12h
-  kyverno-system              kyverno-admission-controller-5655b8f7fc-w8csb             100m (1%)     100m (1%)    128Mi (0%)       384Mi (1%)     5d12h
-  kyverno-system              kyverno-background-controller-65cd987565-knbt8            100m (1%)     0 (0%)       64Mi (0%)        200Mi (0%)     5d12h
-  kyverno-system              kyverno-background-controller-65cd987565-szzmn            100m (1%)     0 (0%)       64Mi (0%)        200Mi (0%)     5d12h
-  kyverno-system              kyverno-cleanup-controller-5d9f8df4d-669ml                100m (1%)     0 (0%)       64Mi (0%)        200Mi (0%)     5d12h
-  kyverno-system              kyverno-cleanup-controller-5d9f8df4d-8bk6k                100m (1%)     0 (0%)       64Mi (0%)        200Mi (0%)     5d12h
-  kyverno-system              kyverno-reports-controller-5c5cbf88f9-dzgnr               100m (1%)     0 (0%)       64Mi (0%)        256Mi (0%)     5d12h
-  kyverno-system              kyverno-reports-controller-5c5cbf88f9-w2j4c               100m (1%)     0 (0%)       64Mi (0%)        256Mi (0%)     5d12h
-  livelink-db                 livelink-db-01-cluster-1                                  100m (1%)     100m (1%)    6Gi (21%)        6Gi (21%)      3d23h
-  livelink-db                 livelink-db-01-cluster-3                                  100m (1%)     100m (1%)    6Gi (21%)        6Gi (21%)      3d23h
-  livelink-db                 livelink-db-site-custom-cluster-1                         100m (1%)     100m (1%)    2Gi (7%)         2Gi (7%)       3d23h
-  livelink-db                 livelink-db-timescaledb-cluster-1                         100m (1%)     100m (1%)    4Gi (14%)        4Gi (14%)      3d23h
-  vmware-system-csi           vsphere-csi-node-77xgr                                    0 (0%)        0 (0%)       0 (0%)           0 (0%)         3d23h
-Allocated resources:
-  (Total limits may be over 100 percent, i.e., overcommitted.)
-  Resource           Requests       Limits
-  --------           --------       ------
-  cpu                4665m (58%)    8640m (109%)
-  memory             28376Mi (99%)  39168Mi (137%)
-  ephemeral-storage  150Mi (0%)     6Gi (27%)
-  hugepages-1Gi      0 (0%)         0 (0%)
-  hugepages-2Mi      0 (0%)         0 (0%)
-Events:              <none>
+ami-mde-db          ami-mde-db-mde-prd-cluster-1                                            Cluster      ami-mde-db-mde-prd-cluster                  20500       2Gi
+ami-mde-db          ami-mde-db-mde-prd-cluster-2                                            Cluster      ami-mde-db-mde-prd-cluster                  20500       2Gi
+atlas-system        kubescape-node-agent-wvcjj                                              DaemonSet    kubescape-node-agent                        100000100   180Mi
+cert-manager        cert-manager-65bb4b7446-4hk68                                           ReplicaSet   cert-manager-65bb4b7446                     1010000     200Mi
+cert-manager        cert-manager-65bb4b7446-vfqzg                                           ReplicaSet   cert-manager-65bb4b7446                     1010000     200Mi
+cert-manager        cert-manager-cainjector-5877b687dc-4rsms                                ReplicaSet   cert-manager-cainjector-5877b687dc          1010000     64Mi
+cert-manager        cert-manager-cainjector-5877b687dc-g8bgx                                ReplicaSet   cert-manager-cainjector-5877b687dc          1010000     64Mi
+cert-manager        cert-manager-webhook-5c564bbfcd-2vwnh                                   ReplicaSet   cert-manager-webhook-5c564bbfcd             1010000     32Mi
+cert-manager        cert-manager-webhook-5c564bbfcd-6tkjx                                   ReplicaSet   cert-manager-webhook-5c564bbfcd             1010000     32Mi
+cert-manager        cert-manager-webhook-5c564bbfcd-sv9hh                                   ReplicaSet   cert-manager-webhook-5c564bbfcd             1010000     32Mi
+cnpg-system         cloudnative-pg-75d7696cb5-rvpr2                                         ReplicaSet   cloudnative-pg-75d7696cb5                   1000000     256Mi
+cnpg-system         cloudnative-pg-75d7696cb5-wlz8k                                         ReplicaSet   cloudnative-pg-75d7696cb5                   1000000     256Mi
+confluent-system    confluent-operator-77f55d5978-drtbv                                     ReplicaSet   confluent-operator-77f55d5978               1000000     256Mi
+confluent-system    confluent-operator-77f55d5978-rqxrj                                     ReplicaSet   confluent-operator-77f55d5978               1000000     256Mi
+confluent-system    confluent-operator-77f55d5978-tlvhk                                     ReplicaSet   confluent-operator-77f55d5978               1000000     256Mi
+contour-system      contour-contour-88c7c6c9b-qrcnl                                         ReplicaSet   contour-contour-88c7c6c9b                   1005000     128Mi
+contour-system      contour-envoy-l5xbs                                                     DaemonSet    contour-envoy                               1005000     128Mi+128Mi
+contour-system      contour-gateway-provisioner-68d5bd54dc-4flnv                            ReplicaSet   contour-gateway-provisioner-68d5bd54dc      0           128Mi
+dynatrace-operator  dynatrace-fluent-bit-h4bnb                                              DaemonSet    dynatrace-fluent-bit                        1000000     128Mi
+dynatrace-operator  dynatrace-oneagent-csi-driver-477zn                                     DaemonSet    dynatrace-oneagent-csi-driver               1000000     100Mi+100Mi+30Mi+30Mi
+gpu-operator        gpu-operator-node-feature-discovery-worker-prrfl                        DaemonSet    gpu-operator-node-feature-discovery-worker  2000001000  64Mi
+kube-system         antrea-agent-9zpqt                                                      DaemonSet    antrea-agent                                2000001000  0
+kube-system         kube-proxy-zh44f                                                        DaemonSet    kube-proxy                                  2000001000  0
+kube-system         node-debugger-adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6-6gnm9  -            -                                           0           0
+kube-system         node-debugger-adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6-vwl9c  -            -                                           0           0
+livelink-db         livelink-db-01-cluster-1                                                Cluster      livelink-db-01-cluster                      20500       6Gi
+livelink-db         livelink-db-01-cluster-3                                                Cluster      livelink-db-01-cluster                      20500       6Gi
+livelink-db         livelink-db-site-custom-cluster-1                                       Cluster      livelink-db-site-custom-cluster             20500       2Gi
+livelink-db         livelink-db-timescaledb-cluster-1                                       Cluster      livelink-db-timescaledb-cluster             20500       4Gi
+livelink-hivemq     livelink-hivemq-3                                                       StatefulSet  livelink-hivemq                             0           2Gi
+livelink-system     envoy-oee-gateway-67t2p                                                 DaemonSet    envoy-oee-gateway                           0           50Mi+50Mi
+vmware-system-csi   vsphere-csi-node-77xgr                                                  DaemonSet    vsphere-csi-node                            2000001000  0
+mesac2@CPC-mesac-4BM7S:~$ kubectl top node "$NODE"
+Error from server (NotFound): nodemetrics.metrics.k8s.io "adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6" not found
+mesac2@CPC-mesac-4BM7S:~$ kubectl top pods -A --containers --sort-by=memory
+NAMESPACE                      POD                                                          NAME
+             CPU(cores)   MEMORY(bytes)
+livelink-ignition              livelink-ignition-gateway-0                                  gateway
+             393m         5152Mi
+livelink-ignition              livelink-ignition-gateway-0                                  ldap-seeder                    0m           0Mi
+kube-system                    kube-apiserver-adan1-atlas-prd-r7ftq-whtgs                   kube-apiserver                 61m          3036Mi
+kube-system                    kube-apiserver-adan1-atlas-prd-r7ftq-gtxjx                   kube-apiserver                 70m          2927Mi
+kube-system                    kube-apiserver-adan1-atlas-prd-r7ftq-fqdq2                   kube-apiserver                 63m          2727Mi
+gpu-operator                   nvidia-driver-daemonset-5p5k2                                nvidia-driver-ctr              0m           1812Mi
+gpu-operator                   nvidia-driver-daemonset-5lksh                                nvidia-driver-ctr              0m           1807Mi
+gpu-operator                   nvidia-driver-daemonset-lmwp2                                nvidia-driver-ctr              0m           1806Mi
+dynatrace-operator             adan1-atlas-prd-activegate-0                                 activegate                     31m          1389Mi
+livelink-hivemq                livelink-hivemq-2                                            hivemq
+             16m          1183Mi
+livelink-hivemq                livelink-hivemq-0                                            hivemq
+             14m          1183Mi
+livelink-hivemq                livelink-hivemq-1                                            hivemq
+             16m          1172Mi
+hivemq-operator                hivemq-hivemq-operator-6b4fdb876b-5vlgt                      hivemq-platform-operator       2m           600Mi
+gpu-operator                   nvidia-dcgm-exporter-hz6lw                                   nvidia-dcgm-exporter           5m           424Mi
+gpu-operator                   nvidia-dcgm-exporter-7twr8                                   nvidia-dcgm-exporter           4m           422Mi
+gpu-operator                   nvidia-dcgm-exporter-wxrdh                                   nvidia-dcgm-exporter           6m           421Mi
+livelink-db                    livelink-db-01-cluster-2                                     postgres
+             198m         326Mi
+atlas-system                   kubescape-node-agent-b6ljm                                   kubescape-node-agent           3m           258Mi
+livelink-db                    livelink-db-platform-cluster-1                               postgres
+             6m           244Mi
+livelink-db                    livelink-db-platform-cluster-2                               postgres
+             6m           240Mi
+atlas-system                   kubescape-node-agent-bc9px                                   kubescape-node-agent           3m           216Mi
+atlas-system                   kubescape-node-agent-98m9w                                   kubescape-node-agent           2m           209Mi
+atlas-system                   kubescape-node-agent-gw4jn                                   kubescape-node-agent           2m           208Mi
+livelink-db                    livelink-db-timescaledb-cluster-3                            postgres
+             4m           206Mi
+livelink-db                    livelink-db-timescaledb-cluster-2                            postgres
+             3m           205Mi
+atlas-system                   kubescape-node-agent-mnptw                                   kubescape-node-agent           2m           204Mi
+livelink-db                    livelink-db-platform-cluster-3                               postgres
+             3m           193Mi
+kube-system                    antrea-agent-2klvj                                           antrea-ovs                     13m          112Mi
+kube-system                    antrea-agent-2klvj                                           antrea-agent                   7m           73Mi
+kube-system                    antrea-agent-bh5cc                                           antrea-ovs                     19m          113Mi
+kube-system                    antrea-agent-bh5cc                                           antrea-agent                   12m          70Mi
+kube-system                    kube-controller-manager-adan1-atlas-prd-r7ftq-gtxjx          kube-controller-manager        16m          182Mi
+kube-system                    antrea-agent-jnvrj                                           antrea-ovs                     8m           109Mi
+kube-system                    antrea-agent-jnvrj                                           antrea-agent                   7m           68Mi
+kube-system                    antrea-agent-sqp5j                                           antrea-ovs                     8m           109Mi
+kube-system                    antrea-agent-sqp5j                                           antrea-agent                   7m           67Mi
+kube-system                    antrea-agent-m6tlm                                           antrea-ovs                     8m           109Mi
+kube-system                    antrea-agent-m6tlm                                           antrea-agent                   7m           66Mi
+kube-system                    etcd-adan1-atlas-prd-r7ftq-gtxjx                             etcd
+             48m          165Mi
+kube-system                    antrea-agent-rz9ks                                           antrea-agent                   7m           93Mi
+kube-system                    antrea-agent-rz9ks                                           antrea-ovs                     11m          69Mi
+kube-system                    etcd-adan1-atlas-prd-r7ftq-whtgs                             etcd
+             54m          150Mi
+livelink-db                    livelink-db-site-custom-cluster-3                            postgres
+             5m           146Mi
+ami-mde-db                     ami-mde-db-mde-prd-cluster-3                                 postgres
+             5m           143Mi
+kube-system                    etcd-adan1-atlas-prd-r7ftq-fqdq2                             etcd
+             72m          142Mi
+kube-system                    antrea-agent-kjq85                                           antrea-agent                   6m           73Mi
+kube-system                    antrea-agent-kjq85                                           antrea-ovs
+             7m           67Mi
+kube-system                    antrea-agent-nwxkb                                           antrea-agent                   5m           69Mi
+kube-system                    antrea-agent-nwxkb                                           antrea-ovs                     8m           68Mi
+tkg-system                     kapp-controller-7689ccb896-tnwrr                             kapp-controller                2m           107Mi
+tkg-system                     kapp-controller-7689ccb896-tnwrr                             kapp-controller-sidecarexec    1m           14Mi
+livelink-db                    livelink-db-site-custom-cluster-2                            postgres
+             287m         120Mi
+gpu-operator                   gpu-feature-discovery-468tx                                  gpu-feature-discovery          1m           68Mi
+gpu-operator                   gpu-feature-discovery-468tx                                  config-manager                 1m           34Mi
+vmware-system-csi              vsphere-csi-controller-9778f7d45-dlzlh                       vsphere-syncer                 2m           26Mi
+vmware-system-csi              vsphere-csi-controller-9778f7d45-dlzlh                       vsphere-csi-controller         1m           19Mi
+vmware-system-csi              vsphere-csi-controller-9778f7d45-dlzlh                       csi-provisioner                1m           15Mi
+vmware-system-csi              vsphere-csi-controller-9778f7d45-dlzlh                       csi-attacher                   1m           11Mi
+vmware-system-csi              vsphere-csi-controller-9778f7d45-dlzlh                       csi-resizer                    2m           10Mi
+vmware-system-csi              vsphere-csi-controller-9778f7d45-dlzlh                       csi-snapshotter                1m           10Mi
+vmware-system-csi              vsphere-csi-controller-9778f7d45-dlzlh                       liveness-probe                 1m           6Mi
+gpu-operator                   gpu-feature-discovery-g2k2k                                  gpu-feature-discovery          1m           64Mi
+gpu-operator                   gpu-feature-discovery-g2k2k                                  config-manager                 1m           35Mi
+gpu-operator                   gpu-feature-discovery-8ssdm                                  gpu-feature-discovery          3m           67Mi
+gpu-operator                   gpu-feature-discovery-8ssdm                                  config-manager                 1m           30Mi
+flux-system                    kustomize-controller-5f7c645849-txfdf                        manager
+             29m          95Mi
+kube-system                    antrea-controller-6c6bcd674d-v8b5x                           antrea-controller              3m           83Mi
+gpu-operator                   gpu-operator-78cc869767-9xjdr                                gpu-operator                   1m           80Mi
+gpu-operator                   nvidia-device-plugin-daemonset-gnqq4                         nvidia-device-plugin           1m           43Mi
+gpu-operator                   nvidia-device-plugin-daemonset-gnqq4                         config-manager                 1m           34Mi
+gpu-operator                   nvidia-device-plugin-daemonset-8pmbl                         nvidia-device-plugin           1m           42Mi
+gpu-operator                   nvidia-device-plugin-daemonset-8pmbl                         config-manager                 1m           35Mi
+gpu-operator                   nvidia-device-plugin-daemonset-lbm6w                         nvidia-device-plugin           1m           38Mi
+gpu-operator                   nvidia-device-plugin-daemonset-lbm6w                         config-manager                 1m           35Mi
+external-secrets               external-secrets-cert-controller-597c787487-wtnsg            cert-controller                1m           73Mi
+kyverno-system                 kyverno-admission-controller-5655b8f7fc-mtt4s                kyverno
+             9m           66Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-shwfq                          provisioner                    1m           25Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-shwfq                          server
+             1m           13Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-shwfq                          liveness-probe                 1m           10Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-shwfq                          registrar
+             0m           8Mi
+kyverno-system                 kyverno-reports-controller-5c5cbf88f9-tx2vs                  controller                     2m           59Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-x9x2d                          provisioner                    1m           25Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-x9x2d                          server
+             1m           11Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-x9x2d                          liveness-probe                 1m           10Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-x9x2d                          registrar
+             0m           8Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-xprqz                          provisioner                    1m           25Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-xprqz                          server
+             1m           11Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-xprqz                          liveness-probe                 1m           11Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-xprqz                          registrar
+             0m           8Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-ft8zh                          provisioner                    1m           25Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-ft8zh                          server
+             1m           11Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-ft8zh                          liveness-probe                 1m           10Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-ft8zh                          registrar
+             0m           8Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-9n6g9                          provisioner                    1m           24Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-9n6g9                          liveness-probe                 1m           11Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-9n6g9                          server
+             1m           10Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-9n6g9                          registrar
+             1m           8Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-8njtl                          provisioner                    1m           24Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-8njtl                          liveness-probe                 1m           11Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-8njtl                          server
+             1m           10Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-8njtl                          registrar
+             1m           8Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-gvhh4                          provisioner                    1m           24Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-gvhh4                          liveness-probe                 1m           11Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-gvhh4                          server
+             1m           10Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-gvhh4                          registrar
+             1m           8Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-fg2gd                          provisioner                    1m           24Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-fg2gd                          liveness-probe                 1m           11Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-fg2gd                          server
+             1m           10Mi
+dynatrace-operator             dynatrace-oneagent-csi-driver-fg2gd                          registrar
+             0m           8Mi
+kyverno-system                 kyverno-admission-controller-5655b8f7fc-rst4g                kyverno
+             3m           51Mi
+vmware-system-csi              vsphere-csi-node-bq5jn                                       vsphere-csi-node               1m           38Mi
+vmware-system-csi              vsphere-csi-node-bq5jn                                       node-driver-registrar          2m           7Mi
+vmware-system-csi              vsphere-csi-node-bq5jn                                       liveness-probe                 1m           4Mi
+atlas-system                   kubescape-storage-87b86b58f-2hl2c                            apiserver
+             2m           48Mi
+flux-system                    source-controller-7c74d5c6d8-lvv85                           manager
+             4m           48Mi
+gpu-operator                   nvidia-container-toolkit-daemonset-htrj8                     nvidia-container-toolkit-ctr   2m           48Mi
+kube-system                    metrics-server-7fb85c98cf-gw9vf                              metrics-server                 2m           47Mi
+gpu-operator                   nvidia-container-toolkit-daemonset-8njg5                     nvidia-container-toolkit-ctr   2m           47Mi
+gpu-operator                   nvidia-container-toolkit-daemonset-rzxjr                     nvidia-container-toolkit-ctr   2m           47Mi
+dynatrace-operator             dynatrace-fluent-bit-szxhr                                   fluent-bit                     8m           47Mi
+kyverno-system                 kyverno-admission-controller-5655b8f7fc-4q724                kyverno
+             2m           47Mi
+kube-system                    kube-scheduler-adan1-atlas-prd-r7ftq-gtxjx                   kube-scheduler                 4m           47Mi
+livelink-system                envoy-oee-gateway-fdfhr                                      envoy
+             3m           34Mi
+livelink-system                envoy-oee-gateway-fdfhr                                      shutdown-manager               1m           8Mi
+livelink-system                envoy-oee-gateway-58ffl                                      envoy
+             3m           33Mi
+livelink-system                envoy-oee-gateway-58ffl                                      shutdown-manager               1m           8Mi
+external-secrets               external-secrets-55777f75bd-d92tw                            external-secrets               5m           38Mi
+kube-system                    kube-scheduler-adan1-atlas-prd-r7ftq-whtgs                   kube-scheduler                 4m           38Mi
+kube-system                    kube-scheduler-adan1-atlas-prd-r7ftq-fqdq2                   kube-scheduler                 4m           38Mi
+kyverno-system                 kyverno-background-controller-65cd987565-bbpg4               controller                     1m           38Mi
+vmware-system-csi              vsphere-csi-node-9wftd                                       vsphere-csi-node               0m           23Mi
+vmware-system-csi              vsphere-csi-node-9wftd                                       node-driver-registrar          1m           6Mi
+vmware-system-csi              vsphere-csi-node-9wftd                                       liveness-probe                 1m           4Mi
+livelink-system                contour-oee-gateway-7745c66598-t9jzh                         contour
+             1m           31Mi
+external-secrets               external-secrets-55777f75bd-6jpqt                            external-secrets               2m           31Mi
+contour-system                 contour-envoy-xh86p                                          envoy
+             4m           18Mi
+contour-system                 contour-envoy-xh86p                                          shutdown-manager               1m           10Mi
+kyverno-system                 kyverno-reports-controller-5c5cbf88f9-zthkr                  controller                     2m           28Mi
+dynatrace-operator             adan1-atlas-prd-otel-collector-0                             collector
+             1m           28Mi
+kyverno-system                 kyverno-background-controller-65cd987565-m9kr7               controller                     1m           27Mi
+secretgen-controller           secretgen-controller-9ff67f8bb-4mckq                         secretgen-controller           1m           27Mi
+flux-system                    helm-controller-6d98cf5d6-njzr6                              manager
+             1m           27Mi
+dynatrace-operator             dynatrace-operator-b55659d64-c6j9k                           operator
+             1m           27Mi
+contour-system                 contour-envoy-46zbs                                          envoy
+             4m           18Mi
+contour-system                 contour-envoy-46zbs                                          shutdown-manager               1m           8Mi
+contour-system                 contour-envoy-xtfhs                                          envoy
+             4m           18Mi
+contour-system                 contour-envoy-xtfhs                                          shutdown-manager               1m           8Mi
+contour-system                 contour-envoy-jsm27                                          envoy
+             4m           18Mi
+contour-system                 contour-envoy-jsm27                                          shutdown-manager               1m           8Mi
+vmware-system-cloud-provider   guest-cluster-cloud-provider-7d444d9946-tpgw6                guest-cluster-cloud-provider   1m           26Mi
+contour-system                 contour-envoy-85mqn                                          envoy
+             4m           18Mi
+contour-system                 contour-envoy-85mqn                                          shutdown-manager               1m           8Mi
+kyverno-system                 kyverno-cleanup-controller-5d9f8df4d-bzhf6                   controller                     6m           25Mi
+external-secrets               external-secrets-webhook-c566b5766-cq554                     webhook
+             2m           24Mi
+traefik-gateway                traefik-gateway-6c9458d4bc-rcbl2                             traefik-gateway                1m           23Mi
+vmware-system-csi              vsphere-csi-node-4z298                                       vsphere-csi-node               1m           13Mi
+vmware-system-csi              vsphere-csi-node-4z298                                       node-driver-registrar          1m           5Mi
+vmware-system-csi              vsphere-csi-node-4z298                                       liveness-probe                 1m           3Mi
+livelink-system                contour-oee-gateway-7745c66598-4njzt                         contour
+             1m           23Mi
+traefik-gateway                traefik-gateway-6c9458d4bc-smxtq                             traefik-gateway                1m           23Mi
+dynatrace-operator             dynatrace-fluent-bit-rtg6k                                   fluent-bit                     25m          22Mi
+kube-system                    coredns-697df5f89-mpjrp                                      coredns
+             5m           22Mi
+gpu-operator                   gpu-operator-node-feature-discovery-master-b946897dc-mk7kp   master
+             1m           22Mi
+kube-system                    coredns-697df5f89-r4t5r                                      coredns
+             6m           22Mi
+vmware-system-csi              vsphere-csi-node-fncfv                                       vsphere-csi-node               1m           11Mi
+vmware-system-csi              vsphere-csi-node-fncfv                                       node-driver-registrar          2m           5Mi
+vmware-system-csi              vsphere-csi-node-fncfv                                       liveness-probe                 1m           4Mi
+vmware-system-csi              vsphere-csi-node-78d5h                                       vsphere-csi-node               1m           11Mi
+vmware-system-csi              vsphere-csi-node-78d5h                                       node-driver-registrar          2m           5Mi
+vmware-system-csi              vsphere-csi-node-78d5h                                       liveness-probe                 1m           4Mi
+vmware-system-csi              vsphere-csi-node-k8q7v                                       vsphere-csi-node               0m           11Mi
+vmware-system-csi              vsphere-csi-node-k8q7v                                       node-driver-registrar          2m           5Mi
+vmware-system-csi              vsphere-csi-node-k8q7v                                       liveness-probe                 1m           4Mi
+flux-system                    notification-controller-8966476d6-pl9j6                      manager
+             1m           21Mi
+dynatrace-operator             dynatrace-fluent-bit-9jz7v                                   fluent-bit                     4m           21Mi
+vmware-system-csi              vsphere-csi-node-thscd                                       vsphere-csi-node               1m           11Mi
+vmware-system-csi              vsphere-csi-node-thscd                                       node-driver-registrar          1m           5Mi
+vmware-system-csi              vsphere-csi-node-thscd                                       liveness-probe                 1m           4Mi
+gpu-operator                   gpu-operator-node-feature-discovery-worker-rwgtw             worker
+             1m           20Mi
+vmware-system-csi              vsphere-csi-node-rjlcx                                       vsphere-csi-node               0m           11Mi
+vmware-system-csi              vsphere-csi-node-rjlcx                                       node-driver-registrar          2m           4Mi
+vmware-system-csi              vsphere-csi-node-rjlcx                                       liveness-probe                 1m           4Mi
+kube-system                    kube-proxy-pxplb                                             kube-proxy                     1m           19Mi
+kube-system                    kube-proxy-gmg5z                                             kube-proxy                     1m           18Mi
+kube-system                    kube-proxy-7xgkm                                             kube-proxy                     1m           18Mi
+kube-system                    kube-proxy-cpcsd                                             kube-proxy                     1m           18Mi
+kube-system                    kube-proxy-nxcc4                                             kube-proxy                     1m           18Mi
+atlas-system                   external-dns-7d99b6978-57w2c                                 external-dns                   1m           18Mi
+kube-system                    kube-proxy-265gm                                             kube-proxy                     1m           18Mi
+kube-system                    kube-proxy-dmjs8                                             kube-proxy                     1m           18Mi
+kyverno-system                 kyverno-cleanup-controller-5d9f8df4d-zd82k                   controller                     1m           18Mi
+kube-system                    kube-controller-manager-adan1-atlas-prd-r7ftq-whtgs          kube-controller-manager        1m           17Mi
+kube-system                    kube-controller-manager-adan1-atlas-prd-r7ftq-fqdq2          kube-controller-manager        1m           17Mi
+kube-system                    kube-proxy-lh694                                             kube-proxy                     1m           17Mi
+dynatrace-operator             dynatrace-webhook-86457b7fc7-txx7m                           webhook
+             1m           17Mi
+atlas-system                   kubescape-operator-547fb9745f-xv4hw                          kubescape-operator             1m           15Mi
+dynatrace-operator             dynatrace-webhook-86457b7fc7-dv8qh                           webhook
+             1m           15Mi
+gpu-operator                   gpu-operator-node-feature-discovery-worker-84lzv             worker
+             1m           15Mi
+gpu-operator                   gpu-operator-node-feature-discovery-worker-8t74v             worker
+             1m           14Mi
+gpu-operator                   gpu-operator-node-feature-discovery-worker-cb7wb             worker
+             1m           14Mi
+gpu-operator                   gpu-operator-node-feature-discovery-worker-lhzcn             worker
+             1m           14Mi
+gpu-operator                   gpu-operator-node-feature-discovery-worker-728hc             worker
+             1m           14Mi
+gpu-operator                   gpu-operator-node-feature-discovery-worker-vs8nt             worker
+             1m           14Mi
+livelink-system                reloader-647db4846c-6fpwc                                    reloader
+             1m           14Mi
+atlas-system                   rbac-manager-86976c7b6f-9pjdb                                rbac-manager                   1m           14Mi
+gpu-operator                   gpu-operator-node-feature-discovery-worker-6lmgs             worker
+             1m           13Mi
+emqx-operator                  emqx-operator-controller-manager-5477575666-z4b58            manager
+             1m           13Mi
+dynatrace-operator             dynatrace-fluent-bit-fzllg                                   fluent-bit                     2m           11Mi
+dynatrace-operator             dynatrace-fluent-bit-b6dtl                                   fluent-bit                     2m           10Mi
+dynatrace-operator             dynatrace-fluent-bit-zncps                                   fluent-bit                     2m           10Mi
+dynatrace-operator             dynatrace-fluent-bit-gjhr8                                   fluent-bit                     3m           9Mi
+dynatrace-operator             dynatrace-fluent-bit-dj5ff                                   fluent-bit                     3m           9Mi
+gpu-operator                   gpu-operator-node-feature-discovery-gc-bdbc64d47-rx2r7       gc
+             1m           9Mi
+vmware-system-auth             guest-cluster-auth-svc-mtkt7                                 guest-cluster-auth-service     1m           9Mi
+vmware-system-auth             guest-cluster-auth-svc-sg7jg                                 guest-cluster-auth-service     1m           8Mi
+vmware-system-auth             guest-cluster-auth-svc-glthd                                 guest-cluster-auth-service     1m           8Mi
+kube-system                    snapshot-controller-798c455795-n2fqg                         snapshot-controller            1m           8Mi
+gpu-operator                   nvidia-operator-validator-n22lc                              nvidia-operator-validator      0m           1Mi
+gpu-operator                   nvidia-operator-validator-h524m                              nvidia-operator-validator      0m           1Mi
+gpu-operator                   nvidia-operator-validator-rs7hh                              nvidia-operator-validator      1m           1Mi
+ami-svp                        netshoot01-5c4574d9f8-8fhbd                                  netshoot
+             4m           0Mi
+mesac2@CPC-mesac-4BM7S:~$ kubectl get pdb -A
+NAMESPACE            NAME                            MIN AVAILABLE   MAX UNAVAILABLE   ALLOWED DISRUPTIONS   AGE
+atlas-system         external-dns                    N/A             1                 1                     71d
+cert-manager         cert-manager                    1               N/A               1                     71d
+cert-manager         cert-manager-cainjector         1               N/A               1                     71d
+cert-manager         cert-manager-webhook            1               N/A               0                     71d
+dynatrace-operator   dynatrace-webhook               1               N/A               1                     71d
+kyverno-system       kyverno-admission-controller    1               N/A               2                     71d
+kyverno-system       kyverno-background-controller   1               N/A               1                     71d
+kyverno-system       kyverno-cleanup-controller      1               N/A               1                     71d
+kyverno-system       kyverno-reports-controller      1               N/A               1                     71d
 mesac2@CPC-mesac-4BM7S:~$
-mesac2@CPC-mesac-4BM7S:~$ kubectl explain contourdeployment.spec.envoy --api-version=projectcontour.io/v1alpha1 | grep -i priority
-mesac2@CPC-mesac-4BM7S:~$ kubectl get pod envoy-oee-gateway-67t2p -n livelink-system -o jsonpath='{range .spec.containers[*]}{.name}{": "}{.resources.requests.memory}{"\n"}{end}'
-shutdown-manager: 50Mi
-envoy: 50Mi
-mesac2@CPC-mesac-4BM7S:~$ kubectl get clusters.postgresql.cnpg.io -A
-NAMESPACE     NAME                              AGE   INSTANCES   READY   STATUS                     PRIMARY
-ami-mde-db    ami-mde-db-mde-prd-cluster        69d   3           3       Cluster in healthy state   ami-mde-db-mde-prd-cluster-3
-livelink-db   livelink-db-01-cluster            40d   3           3       Cluster in healthy state   livelink-db-01-cluster-2
-livelink-db   livelink-db-platform-cluster      40d   3           3       Cluster in healthy state   livelink-db-platform-cluster-2
-livelink-db   livelink-db-site-custom-cluster   40d   3           3       Cluster in healthy state   livelink-db-site-custom-cluster-3
-livelink-db   livelink-db-timescaledb-cluster   40d   3           3       Cluster in healthy state   livelink-db-timescaledb-cluster-2
-mesac2@CPC-mesac-4BM7S:~$ kubectl get pods -n livelink-db -L role,cnpg.io/instanceRole -o wide
-NAME                                READY   STATUS    RESTARTS   AGE     IP             NODE
-                               NOMINATED NODE   READINESS GATES   ROLE      INSTANCEROLE
-livelink-db-01-cluster-1            1/1     Running   0          3d23h   100.64.18.62   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6   <none>           <none>            replica   replica
-livelink-db-01-cluster-2            1/1     Running   0          3d23h   100.64.21.11   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-bx9ct   <none>           <none>            primary   primary
-livelink-db-01-cluster-3            1/1     Running   0          3d23h   100.64.18.65   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6   <none>           <none>            replica   replica
-livelink-db-platform-cluster-1      1/1     Running   0          41h     100.64.21.33   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-bx9ct   <none>           <none>            replica   replica
-livelink-db-platform-cluster-2      1/1     Running   0          3d23h   100.64.21.25   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-bx9ct   <none>           <none>            primary   primary
-livelink-db-platform-cluster-3      1/1     Running   0          41h     100.64.25.18   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-9s8g7   <none>           <none>            replica   replica
-livelink-db-site-custom-cluster-1   1/1     Running   0          3d23h   100.64.18.64   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6   <none>           <none>            replica   replica
-livelink-db-site-custom-cluster-2   1/1     Running   0          41h     100.64.25.20   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-9s8g7   <none>           <none>            replica   replica
-livelink-db-site-custom-cluster-3   1/1     Running   0          3d23h   100.64.21.24   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-bx9ct   <none>           <none>            primary   primary
-livelink-db-timescaledb-cluster-1   1/1     Running   0          3d23h   100.64.18.61   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6   <none>           <none>            replica   replica
-livelink-db-timescaledb-cluster-2   1/1     Running   0          3d23h   100.64.21.10   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-bx9ct   <none>           <none>            primary   primary
-livelink-db-timescaledb-cluster-3   1/1     Running   0          3d23h   100.64.21.23   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-bx9ct   <none>           <none>            replica   replica
-mesac2@CPC-mesac-4BM7S:~$ kubectl get pods -n ami-mde-db -L role,cnpg.io/instanceRole -o wide
-NAME                           READY   STATUS    RESTARTS   AGE     IP             NODE
-                          NOMINATED NODE   READINESS GATES   ROLE      INSTANCEROLE
-ami-mde-db-mde-prd-cluster-1   1/1     Running   0          3d23h   100.64.18.63   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6   <none>           <none>            replica   replica
-ami-mde-db-mde-prd-cluster-2   1/1     Running   0          3d23h   100.64.18.66   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6   <none>           <none>            replica   replica
-ami-mde-db-mde-prd-cluster-3   1/1     Running   0          3d23h   100.64.21.14   adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-bx9ct   <none>           <none>            primary   primary
-mesac2@CPC-mesac-4BM7S:~$ kubectl describe node adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-9s8g7 | grep -A6 "Allocated resources"
-Allocated resources:
-  (Total limits may be over 100 percent, i.e., overcommitted.)
-  Resource           Requests       Limits
-  --------           --------       ------
-  cpu                3920m (49%)    18390m (232%)
-  memory             16896Mi (59%)  44040Mi (155%)
-  ephemeral-storage  100Mi (0%)     4Gi (18%)
-mesac2@CPC-mesac-4BM7S:~$ kubectl explain contourdeployment.spec.envoy --api-version=projectcontour.io/v1alpha1 --recursive | grep -i -B2 -A2 priority
-mesac2@CPC-mesac-4BM7S:~$ kubectl get crd contourdeployments.projectcontour.io -o yaml | grep -i priority
-mesac2@CPC-mesac-4BM7S:~$
-
-
-4. My team did the next:
-stuve revisando por qué el pod de Envoy está en Pending en adan1-atlas-prd.
-1. Primero vimos el error del pod:
-kubectl describe pod envoy-oee-gateway-67t2p -n livelink-system
-El scheduler reporta Insufficient memory y que 8 nodos no cumplen con NodeAffinity.
-2. Revisamos la memoria del worker:
-kubectl describe node adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6
-Encontramos que tiene el 99% de la memoria reservada por requests, aunque el consumo real es mucho menor.
-3. Revisamos la regla de afinidad de Envoy:
-kubectl get pod envoy-oee-gateway-67t2p \
-  -n livelink-system \
-  -o jsonpath='{.spec.affinity}{"\n"}'
-Encontramos una regla requiredDuringSchedulingIgnoredDuringExecution que obliga al pod a ejecutarse exclusivamente en ese worker.
-4. Revisamos los workers disponibles:
-kubectl get nodes -o wide
-El clúster tiene otros workers disponibles, pero Envoy no puede utilizarlos por esa regla.
-5. Revisamos las bases de datos PostgreSQL:
-kubectl get pods -n livelink-db \
-  -l cnpg.io/cluster=livelink-db-01-cluster \
-  -o wide
-Encontramos que dos instancias de PostgreSQL comparten ese worker.
-6. Verificamos sus recursos:
-kubectl get cluster livelink-db-01-cluster \
-  -n livelink-db \
-  -o jsonpath='{.spec.resources}{"\n"}'
-Cada instancia reserva 6 GiB de RAM.
-En conclusión, tenemos una restricción de afinidad que obliga a Envoy a ejecutarse en un nodo con la memoria casi totalmente comprometida. El scheduler sigue reportando falta de memoria, aunque debemos validar la diferencia con la capacidad calculada.
-Creo que deberíamos revisar la regla de afinidad y la distribución de las cargas antes de modificar algo en producción.
- 
-tambien revise la afinidad y las prioridades de los otros pods del worker.
-Para revisar la afinidad de un pod usamos:
-kubectl get pod <pod-name> -n <namespace> -o yaml
-Y para consultar las prioridades de los pods del nodo:
-kubectl get pods -A \
-  --field-selector spec.nodeName=adan1-atlas-prd-worker-node-pool-zh8pf-n6hkk-xq6j6 \
-  -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,PRIORITY:.spec.priority'
-Encontramos que Envoy tiene prioridad 0, varios pods también tienen prioridad 0 y PostgreSQL tiene 20500.
- 
-Por eso, una prioridad de 1000 podría ser una buena opción: pondría a Envoy por encima de los pods con prioridad 0, pero por debajo de PostgreSQL.
-La regla de NodeAffinity no representa un conflicto, porque Envoy seguiría asignado al mismo worker. Lo que cambiaría sería su capacidad de desplazar pods de menor prioridad para liberar memoria.
-Antes de aplicarlo, debemos validar cuáles serían los pods afectados por la preemption.
-
-Another team
-The pod is pending because two things are happening at the same time:
-The pod is restricted by node affinity to only a small set of nodes.
-At least one of those eligible nodes does not have enough free allocatable memory to satisfy the pod’s request.
-So even though the pod is valid, Kubernetes cannot find a node where it both fits and matches the affinity rules.
-Recommended step-by-step approach
-1. Confirm the scheduling constraints
-Check exactly what the pod requires:
-bash
- 
-Shell
-kubectl get pod <pod-name> -n <namespace> -o yaml
-Look for:
-affinity
-resources.requests.memory
-resources.limits.memory
-any tolerations
-whether it is a DaemonSet or Deployment
-If it is a DaemonSet, remember:
-it will try to place one pod on every eligible node
-if one eligible node cannot fit it, that pod stays pending on that node
-2. Check the eligible nodes and available memory
-List the nodes that match the affinity rules:
-bash
- 
-Shell
-kubectl get nodes --show-labels
-Then inspect memory pressure and allocatable memory on each eligible node:
-bash
- 
-Shell
-kubectl describe node <node-name> | egrep "Allocatable:|MemoryPressure|memory"kubectl top node <node-name>
-Compare:
-requested memory from running pods
-allocatable memory on the node
-actual usage and headroom
-If the node is near capacity, the pod will not schedule even if the node is otherwise eligible.
-3. Decide the fastest remediation
-You usually have three options.
-Option A: Increase capacity
-Best if the gateway is important and should always be schedulable.
-Actions:
-add another node to the eligible node pool
-resize the node pool to larger memory nodes
-increase memory capacity on the dedicated gateway nodes
-This is the most reliable fix if the DaemonSet is expected to run consistently.
-Option B: Redistribute workloads
-Best if the node is full because other workloads are consuming too much memory.
-Actions:
-move lower-priority workloads off the gateway nodes
-reduce memory requests for noncritical pods if they are oversized
-rebalance workloads across other pools
-This helps if the current node pool is being overcommitted by unrelated workloads.
-Option C: Adjust affinity
-Best if the gateway does not truly need such a narrow node selection.
-Actions:
-broaden the node affinity to include more nodes
-use node labels to target a larger eligible pool
-avoid overly restrictive affinity unless the workload truly needs it
-Be careful here: loosening affinity may solve scheduling but could reduce isolation or performance guarantees.
-4. Use PriorityClass for the gateway
-If the gateway is critical, give it a higher scheduling priority so it can preempt less important workloads when needed.
-What to do:
-create or update a PriorityClass
-assign it to the gateway pod template
-ensure preemption behavior is acceptable in your cluster
-This is useful when the gateway must win over other workloads.
-However, priority alone does not create capacity. If the eligible node is genuinely full and preemption is not helpful, you still need memory headroom or more capacity.
-5. Review memory requests, not just actual usage
-Scheduling is based primarily on memory requests, not just observed runtime usage.
-So even if the node seems to have some free memory, the pod can still fail if:
-the total requested memory from all running pods exceeds allocatable memory
-the gateway request is larger than the remaining request budget
-Check:
-bash
- 
-Shell
-kubectl get pods -n <namespace> -o custom-columns=NAME:.metadata.name,REQUESTS:.spec.containers[*].resources.requests.memory
-If requests are inflated, reduce them where appropriate.
-6. If this is a DaemonSet, verify the design intent
-Since a DaemonSet runs one pod per eligible node, ask:
-do we truly need the gateway on only 2 or 3 nodes?
-is that node set intentionally small?
-should the gateway run on a dedicated pool?
-If the answer is yes, then the node pool should be sized specifically for the DaemonSet.
-If not, broaden the eligible node set.
-7. Validate the fix before merging
-If you are testing in a dev branch or Helm chart, validate with:
-a dry-run manifest review
-a staging deployment
-kubectl describe pod after rollout
-confirm the pod leaves Pending and reaches Running
-For example:
-bash
- 
-Shell
-kubectl rollout restart ds/<daemonset-name> -n <namespace>kubectl get pods -n <namespace> -w
-
-
-Best-practice prevention plan
-1. Reserve enough headroom on gateway nodes
-Do not run gateway nodes at 99 percent of allocatable memory.
-Keep a buffer for:
-system overhead
-sudden pod bursts
-DaemonSet placement
-node-level processes
-A common operational practice is to keep significant headroom, especially on dedicated infrastructure.
-2. Use a dedicated node pool for gateway traffic
-If the gateway is critical, isolate it on a node pool sized for:
-the gateway DaemonSet
-kube/system overhead
-expected growth
-This prevents general workloads from starving the gateway.
-3. Set a PriorityClass for critical networking components
-Make sure critical pods can out-prioritize less important work.
-Use this carefully:
-it helps only if there is something to preempt
-it should be part of a broader capacity plan
-don’t rely on priority alone as the only protection
-4. Keep requests realistic
-Avoid over-requesting memory for noncritical workloads.
-If requests are too high, scheduling becomes artificially constrained.
-Review:
-actual usage
-request/limit ratios
-historical peaks
-Then tune accordingly.
-5. Add monitoring and alerts
-Set alerts for:
-node allocatable memory consumption
-memory pressure
-pending pods
-failed scheduling events
-DaemonSet unavailable pods
-This lets you catch the issue before the pod becomes stuck for days.
-6. Treat node affinity as a capacity decision
-If a workload can only run on a few nodes, those nodes must be sized as a dedicated service tier.
-In other words:
-narrow affinity means you need stronger capacity planning
-broad affinity means more flexibility, but less isolation
-Recommended remediation order for your case
-If I were prioritizing the fix, I would suggest:
-Confirm the gateway pod’s memory request and affinity rules.
-Check how much memory is already requested on the eligible nodes.
-Increase memory capacity on the eligible node pool if the gateway must remain restricted.
-If capacity cannot be increased quickly, move or reduce lower-priority workloads.
-Add or raise PriorityClass for the gateway so it can preempt less important pods.
-Only widen affinity if the gateway does not require such a strict node set.
-Short version you can send to the team
-The pod is pending because the DaemonSet is restricted by node affinity to a small set of nodes, and one of the eligible nodes does not have enough allocatable memory for the pod request. To prevent this, we should either increase capacity on the gateway node pool, redistribute or reduce memory usage of lower-priority workloads, or relax affinity if the gateway does not need to stay on such a narrow set of nodes. For critical traffic, adding a higher PriorityClass is also recommended so the gateway can preempt lower-priority pods when necessary.
-
-5. I have the repo of the cluster
-https://code.medtronic.com/io-shared-services/atlas/kubernetes-management/adan1-atlas-prd
-Name	Last commit	Last update
-.gitlab/merge_request_templates	Added Hosted Zone ID and copier first
-2 months ago
-.port	chore: update from cluster template v1.71.1
-22 hours ago
-cluster	chore(): Update HelmRelease manifest for platform cnpg-postgres-cluster [ci skip]
-1 day ago
-crds	Added Hosted Zone ID and copier first
-2 months ago
-external-secret-store	chore: update from cluster template v1.71.0
-1 week ago
-flux	Add Flux v2.6.1 component manifests
-2 months ago
-.copier-answers.yml	chore: update from cluster template v1.71.1
-22 hours ago
-.editorconfig	Added Hosted Zone ID and copier first
-2 months ago
-.gitlab-ci.yml	Added Hosted Zone ID and copier first
-2 months ago
-.sops.yaml	Added Hosted Zone ID and copier first
-2 months ago
-README.md	Added Hosted Zone ID and copier first
-2 months ago
-adan1-atlas-prd.yaml	normalize k8s release version name
-
-7. Claude (AI) did the next:
-The explain | grep returned nothing, so this Contour version's ContourDeployment has no priorityClassName field. I'm reverting my earlier chart changes.
-
-values.yaml+0-6
-gatewayclass.yaml+0-16
-Thought for a few seconds
-I've removed the PriorityClass changes I added earlier: the new contour.envoy values block and the template parts in gatewayclass.yaml. Both files should now match the original. The Envoy DaemonSet is generated by Contour, so a priority class can't be set from this chart. That means moving a DB replica is the fix.
-
-What your output shows
-The Envoy pod only needs 100Mi (two containers at 50Mi each), but xq6j6 has only about 11Mi free.
-All 15 Postgres instances run on just 3 nodes, and spread unevenly:
-Node	Primaries	Replicas
-xq6j6	0	6: livelink-db-01 ×2, ami-mde ×2, site-custom, timescaledb
-bx9ct	5 (every primary)	3
-9s8g7	0	2
-High-availability risk:
-livelink-db-01 and ami-mde-db have both replicas on xq6j6. Losing that node would leave each cluster with only its primary.
-timescaledb and platform have their primary and a replica together on bx9ct.
-All five primaries are on bx9ct, so losing that node triggers five failovers at once.
-Fix
-Move one replica off xq6j6. The best choice is ami-mde-db-mde-prd-cluster-2: it's a replica, it's the smallest (2Gi), and its twin (member 1) is on the same node.
-
-Check that 9s8g7 has at least 2Gi of unrequested memory:
-If it doesn't have room, stop here and escalate for more capacity.
-Move the replica (needs permission to cordon nodes and delete pods in ami-mde-db):
-Wait until it's Running and 1/1 on another node.
-Envoy should then schedule into the freed 2Gi. If the replica's volume can't attach on the new node, the replica will stay Pending. Check kubectl describe pod and kubectl get events -n ami-mde-db.
-Prevent it happening again
-Required anti-affinity on each CNPG Cluster (in the repos that own the databases):
-There are exactly 3 worker nodes, so with this setting one more node loss leaves instances Pending. Plan this with the DB owners.
-Spread the primaries: use CNPG switchovers (kubectl cnpg promote) so the five primaries aren't all on bx9ct.
-Capacity: about 22Gi of guaranteed DB memory per node, on 28Gi allocatable nodes, leaves no headroom. Ask for a 4th worker node or bigger nodes.
-Envoy priority: a Kyverno mutate policy could set priorityClassName on the envoy-* DaemonSets. The Contour provisioner may undo that change, so test it on dev first.
