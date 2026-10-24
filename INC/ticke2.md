@@ -1,67 +1,220 @@
-mesac2_mdt: 1. Look the context
-Add/Modify Network Egress Rules
-When to perform this procedure
-When a customer requests the addition or modification of network egress rules for a specific namespace in an Antrea-managed Kubernetes cluster.
-Warning
+Worked for 1m 31s
 
-Ensure the traffic the customer needs to enable will be moving in the egress direction, that is it originates in the cluster and is destined for a service running somewhere other than the cluster. For requests you determine are describing traffic in the reverse (ingress) direction, follow Ingress Rule for Gateway Communication instead.
+El problema ya no parece estar en Tanzu/Antrea. La política del clúster permite TCP y UDP 44818, y los intentos reales del pod Ignition salen como Allow. El siguiente punto de investigación es el IE3400/L2NAT y la comunicación EtherNet/IP con el PLC. 
 
-Overview
-Use this guide to perform and complete a "Network Egress Rule" request for Antrea Cluster Network Policy. This is a known and recurrent request/ticket.
+Correcciones a las conclusiones de la otra IA
 
-Prerequisites
-Collect this information before you begin:
+La otra IA llegó demasiado rápido a algunas conclusiones:
 
-Customer request details
-Required outbound destination(s)
-Namespace(s) involved
-Port(s) and protocol(s)
-GitLab repository access (GitOps project for the cluster in question)
-Permissions to create a branch, push changes, and create a Merge Request on the above repository
-For example:
+Traceflow: ForwardedOutOfOverlay solo prueba que Antrea deja salir el paquete; no prueba que llegue al PLC.
 
-Requirement	Sample data
-Namespace	livelink-ignition
-FQDN	stg.mecc.livelink.medtronic.com
-Protocol	TCP
-Port	443
-Policy name	Egress rule for MECC V2
-YAML file name	egress-livelink-mecc
-Procedure
-Gather the required information from the requestor, ServiceNow, or the Application Traffic Pattern sheet.
+El exit=0 prueba que se completó un handshake TCP con algo que responde por 10.76.36.40:44818. No identifica necesariamente al PLC.
 
-Clone the repository locally, create a branch from main, and switch to that branch.
+Un firewall con acción Accept no prueba que exista respuesta de aplicación; hay que revisar bytes enviados/recibidos y el motivo de terminación de la sesión.
 
-Navigate to the cluster repository path:
+Que la prueba EtherNet/IP artesanal no devuelva información tampoco demuestra por sí sola que otro dispositivo esté respondiendo.
 
-cluster/customer-components/cluster-scoped
-Look in that folder for a file named antrea_clusternetworkpolicy_egress-{team name}.yaml. Edit that file or create one with that exact name if it does not exist yet:
+Una tabla ARP vacía en el PLC es una señal útil, pero no prueba definitiva: depende de la traducción L2NAT, expiración de ARP y de qué dirección debería observar realmente el PLC.
 
-apiVersion: crd.antrea.io/v1beta1
-kind: ClusterNetworkPolicy
-metadata:
-    name: egress-livelink-mecc
-spec:
-    egress:
-    - action: Allow
-    appliedTo:
-    - namespaceSelector:
-        matchExpressions:
-            - key: "kubernetes.io/metadata.name"
-            operator: "In"
-            values: ["livelink-ignition"]
-    enableLogging: true
-    name: Egress rule for MECC V2
-    to:
-    - fqdn: stg.mecc.livelink.medtronic.com
-        ports:
-        - protocol: TCP
-            port: 443
-    priority: 80
-    tier: atlas-tenants
-Push the changes to GitLab and create a Merge Request.
+No se debe reiniciar el IE3400 ni limpiar tablas indiscriminadamente en producción sin autorización OT.
 
-Add the required reviewer or approver as indicated in the request.
+
+Puertos requeridos
+
+La documentación oficial de Ignition indica que el Allen-Bradley Logix Driver utiliza tráfico saliente TCP 44818. No aparece un puerto UDP separado para negociación normal ni UDP 2222 para este driver. 
+
+Por tanto:
+
+TCP 44818 es el requisito principal para lectura de tags.
+
+Mantendría UDP 44818 porque el ticket lo solicitó expresamente y ya está implementado.
+
+No agregaría UDP 2222 ni otros puertos sin evidencia concreta del fabricante o capturas que muestren que Ignition intenta utilizarlos.
+
+
+La falta de registro DNS para abrc1-mceovenvacuum017-plc.iiot.medtronic.com tampoco causa la falla actual porque Ignition utiliza directamente 10.76.36.40 y la política ya contiene 10.76.36.40/32.
+
+Qué debes hacer ahora
+
+1. No realizar más cambios en Kubernetes
+
+Desde tu lado ya está comprobado:
+
+El workload correcto es ignition-abrc1l-atlas-stg-0.
+
+Está en livelink-ignition.
+
+TCP 44818 está permitido.
+
+UDP 44818 está permitido.
+
+La política por IP está aplicada.
+
+Los intentos reales coinciden con el ciclo ReconnectWait/Reconnecting.
+
+
+No agregues nuevas reglas “por si acaso”.
+
+2. Solicitar validación precisa del IE3400
+
+El IE3400 soporta L2NAT uno-a-uno. Cisco indica que el tráfico no traducido puede descartarse por defecto y que deben verificarse la instancia, interfaz, VLAN y estadísticas de traducción. 
+
+El equipo OT/IIoT debe ejecutar durante un intento activo:
+
+show l2nat instance
+show l2nat interface
+show l2nat statistics
+show ip arp
+show mac address-table
+
+Deben confirmar específicamente:
+
+Qué dispositivo posee actualmente 10.76.36.40.
+
+La MAC asociada y si todavía corresponde al Secomea SiteManager.
+
+Traducción de destino:
+
+
+10.76.36.40 -> <IP real del PLC en 172.24.53.0/...>
+
+Traducción de origen:
+
+
+10.76.226.3 -> 172.24.53.17
+
+Que la instancia L2NAT esté aplicada a la interfaz uplink y VLAN correctas.
+
+Que los contadores de traducción aumenten mientras Ignition reintenta.
+
+Que el PLC tenga IP, máscara y gateway correctos.
+
+
+La traducción del origen es especialmente importante. Si el IE3400 no traduce 10.76.226.3 hacia 172.24.53.17, el PLC puede no tener una ruta de retorno válida.
+
+3. Pedir detalles completos de la sesión al firewall
+
+No es suficiente con ver Action=Accept. Solicita:
+
+Bytes cliente → servidor.
+
+Bytes servidor → cliente.
+
+SYN, SYN-ACK, FIN o RST observados.
+
+Session end reason.
+
+NAT aplicado.
+
+Interfaz de salida.
+
+Si existe TCP proxy/SYN proxy.
+
+
+Si hay SYN-ACK pero cero bytes de respuesta después del payload EtherNet/IP, el bloqueo o fallo está después del firewall.
+
+4. Hacer captura simultánea
+
+La prueba definitiva es una captura en ambos lados durante el mismo intento:
+
+Desde el pod o nodo Kubernetes.
+
+En la interfaz externa del IE3400.
+
+En la interfaz/VLAN interna hacia el PLC.
+
+
+Si el contenedor dispone de tcpdump:
+
+kubectl exec -n livelink-ignition \
+  ignition-abrc1l-atlas-stg-0 -c ignition -- \
+  sh -c 'command -v tcpdump'
+
+Si está disponible:
+
+kubectl exec -n livelink-ignition \
+  ignition-abrc1l-atlas-stg-0 -c ignition -- \
+  tcpdump -nn -i any \
+  'host 10.76.36.40 and tcp port 44818' \
+  -s 0 -c 100
+
+Interpretación:
+
+SYN sale, pero no regresa SYN-ACK: red, firewall o NAT.
+
+Handshake completo, Ignition envía payload, pero no hay respuesta: IE3400, PLC o ruta de retorno.
+
+Handshake y respuesta EtherNet/IP completos: revisar configuración del LogixDriver.
+
+Solo handshake sin payload: revisar Ignition; el driver no está iniciando correctamente la sesión.
+
+
+Si no hay tcpdump, solicita un contenedor de diagnóstico aprobado o una captura SPAN del equipo OT.
+
+5. Revisar Ignition
+
+Solicita al cliente:
+
+Error exacto anterior a ReconnectWait.
+
+Configuración del dispositivo:
+
+Driver: LogixDriver.
+
+Host: 10.76.36.40.
+
+Port: 44818.
+
+Local Address.
+
+Connection Path.
+
+Timeout.
+
+
+Exportación de WARN/ERROR filtrada por el nombre del dispositivo.
+
+
+Para un 1769-L38ERM con Ethernet integrado, una ruta o slot configurados innecesariamente también podrían impedir la sesión aun cuando TCP funcione.
+
+Mensaje para el equipo OT/IIoT
+
+> Hi team,
+
+The Tanzu portion has been validated. The Ignition pod ignition-abrc1l-atlas-stg-0 in namespace livelink-ignition is allowed to reach 10.76.36.40 over TCP and UDP 44818. Antrea logs show the actual TCP reconnect attempts being allowed and forwarded out of the cluster.
+
+The remaining uncertainty is at the IE3400/L2NAT boundary. A TCP handshake succeeds, but we have not confirmed a valid EtherNet/IP response from the PLC. The PLC reportedly does not show an ARP entry for the expected translated source 172.24.53.17.
+
+Could you please validate during an active Ignition retry:
+
+which MAC/device currently owns 10.76.36.40;
+
+the L2NAT destination mapping from 10.76.36.40 to the PLC’s actual 172.24.53.x address;
+
+the source translation from 10.76.226.3 to 172.24.53.17;
+
+that the L2NAT instance is attached to the correct uplink and VLAN;
+
+the L2NAT counters on both directions;
+
+the TCP session bytes and return traffic;
+
+whether any stale ARP/MAC entry remains from the previous Secomea SiteManager IP conflict.
+
+
+A simultaneous packet capture on the IE3400 outside and inside interfaces would determine exactly where the EtherNet/IP exchange stops.
+
+
+
+Mi recomendación es transferir la investigación activa al equipo OT/IIoT y dejar el ticket de Tanzu en espera, no cerrado, hasta que confirmen la traducción y la captura. No hay otro cambio justificado en la política del clúster.
+
+
+
+
+
+
+
+or approver as indicated in the request.
 
 Once the Merge Request is approved, merge the branch into main.
 
